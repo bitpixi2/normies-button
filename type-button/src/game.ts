@@ -1,4 +1,4 @@
-export const ROUND_SECONDS = 300;
+export const ROUND_SECONDS = 60;
 export const HISTORY_LIMIT = 40;
 
 export type NormieType = "Human" | "Cat" | "Alien" | "Agent" | "Zombie";
@@ -26,8 +26,8 @@ export type RunRecord = {
 export const TYPE_WINDOWS: TypeWindow[] = [
   {
     type: "Human",
-    minRemaining: 241,
-    maxRemaining: 300,
+    minRemaining: 49,
+    maxRemaining: 60,
     color: "#111111",
     accent: "#e3e5e4",
     tone: "#f7f7f7",
@@ -35,8 +35,8 @@ export const TYPE_WINDOWS: TypeWindow[] = [
   },
   {
     type: "Cat",
-    minRemaining: 181,
-    maxRemaining: 240,
+    minRemaining: 37,
+    maxRemaining: 48,
     color: "#111111",
     accent: "#d8d8d8",
     tone: "#f2f2f2",
@@ -44,8 +44,8 @@ export const TYPE_WINDOWS: TypeWindow[] = [
   },
   {
     type: "Alien",
-    minRemaining: 121,
-    maxRemaining: 180,
+    minRemaining: 25,
+    maxRemaining: 36,
     color: "#111111",
     accent: "#cfcfcf",
     tone: "#eeeeee",
@@ -53,8 +53,8 @@ export const TYPE_WINDOWS: TypeWindow[] = [
   },
   {
     type: "Agent",
-    minRemaining: 61,
-    maxRemaining: 120,
+    minRemaining: 13,
+    maxRemaining: 24,
     color: "#111111",
     accent: "#c2c2c2",
     tone: "#e9e9e9",
@@ -63,7 +63,7 @@ export const TYPE_WINDOWS: TypeWindow[] = [
   {
     type: "Zombie",
     minRemaining: 1,
-    maxRemaining: 60,
+    maxRemaining: 12,
     color: "#111111",
     accent: "#b5b5b5",
     tone: "#e4e4e4",

@@ -1,6 +1,6 @@
 # Normies Type Button
 
-Solo five-minute Button game where the countdown window awards a Normies Type flair.
+Global one-minute Button game where the countdown window awards a Normies Type flair.
 
 ```bash
 npm install

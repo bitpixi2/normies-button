@@ -1,4 +1,4 @@
-const ROUND_SECONDS = 300;
+const ROUND_SECONDS = 60;
 const ROUND_MS = ROUND_SECONDS * 1000;
 const TYPES = ["Human", "Cat", "Alien", "Agent", "Zombie"];
 const INITIAL_COUNTS = {
@@ -64,21 +64,19 @@ export class ArenaObject {
 
   async startRound(visitorId) {
     const now = Date.now();
-    const current = await this.getRound();
-    const normalized = normalizeRound(current, now);
+    const { round: normalized, changed } = normalizeRound(
+      await this.getRound(),
+      now
+    );
+    if (changed) {
+      await this.saveRound(normalized);
+    }
 
     if (normalized.status === "active") {
       return this.stateForVisitor(normalized, visitorId, now);
     }
 
-    const nextRound = {
-      status: "active",
-      roundId: normalized.roundId + 1,
-      expiresAt: now + ROUND_MS,
-      totalPresses: 0,
-      pressCounts: { ...INITIAL_COUNTS },
-      lastPress: null
-    };
+    const nextRound = createActiveRound(normalized.roundId + 1, now);
     await this.saveRound(nextRound);
     return this.stateForVisitor(nextRound, visitorId, now);
   }
@@ -89,9 +87,12 @@ export class ArenaObject {
     }
 
     const now = Date.now();
-    const round = normalizeRound(await this.getRound(), now);
-    if (round.status !== "active") {
+    const { round, changed } = normalizeRound(await this.getRound(), now);
+    if (changed) {
       await this.saveRound(round);
+    }
+
+    if (round.status !== "active") {
       return this.stateForVisitor(round, visitorId, now);
     }
 
@@ -104,9 +105,9 @@ export class ArenaObject {
     const remainingSeconds = secondsRemaining(round.expiresAt, now);
     const type = typeForSecondsRemaining(remainingSeconds);
     if (!type) {
-      const expired = { ...round, status: "expired" };
-      await this.saveRound(expired);
-      return this.stateForVisitor(expired, visitorId, now);
+      const nextRound = createActiveRound(round.roundId + 1, now);
+      await this.saveRound(nextRound);
+      return this.stateForVisitor(nextRound, visitorId, now);
     }
 
     const press = {
@@ -135,8 +136,8 @@ export class ArenaObject {
 
   async readState(visitorId) {
     const now = Date.now();
-    const round = normalizeRound(await this.getRound(), now);
-    if (round.status === "expired") {
+    const { round, changed } = normalizeRound(await this.getRound(), now);
+    if (changed) {
       await this.saveRound(round);
     }
 
@@ -194,6 +195,17 @@ function defaultRound() {
   };
 }
 
+function createActiveRound(roundId, now) {
+  return {
+    status: "active",
+    roundId,
+    expiresAt: now + ROUND_MS,
+    totalPresses: 0,
+    pressCounts: { ...INITIAL_COUNTS },
+    lastPress: null
+  };
+}
+
 function normalizeRound(round, now) {
   const normalized = {
     ...defaultRound(),
@@ -201,23 +213,38 @@ function normalizeRound(round, now) {
     pressCounts: { ...INITIAL_COUNTS, ...(round.pressCounts || {}) }
   };
 
-  if (
-    normalized.status === "active" &&
-    normalized.expiresAt &&
-    normalized.expiresAt <= now
-  ) {
-    return { ...normalized, status: "expired", expiresAt: normalized.expiresAt };
+  if (normalized.status === "expired") {
+    return {
+      round: createActiveRound(normalized.roundId + 1, now),
+      changed: true
+    };
   }
 
-  return normalized;
+  if (normalized.status === "active") {
+    if (!normalized.expiresAt || normalized.expiresAt <= now) {
+      return {
+        round: createActiveRound(normalized.roundId + 1, now),
+        changed: true
+      };
+    }
+
+    if (normalized.expiresAt - now > ROUND_MS) {
+      return {
+        round: { ...normalized, expiresAt: now + ROUND_MS },
+        changed: true
+      };
+    }
+  }
+
+  return { round: normalized, changed: false };
 }
 
 function typeForSecondsRemaining(seconds) {
   if (seconds <= 0) return null;
-  if (seconds >= 241) return "Human";
-  if (seconds >= 181) return "Cat";
-  if (seconds >= 121) return "Alien";
-  if (seconds >= 61) return "Agent";
+  if (seconds >= 49) return "Human";
+  if (seconds >= 37) return "Cat";
+  if (seconds >= 25) return "Alien";
+  if (seconds >= 13) return "Agent";
   return "Zombie";
 }
 

@@ -102,7 +102,10 @@ export function App() {
   const adjustedNow = nowMs + (arena.serverNow - Date.now());
   const displayedRemaining =
     arena.status === "active" && arena.expiresAt
-      ? getSecondsRemainingUntil(arena.expiresAt, adjustedNow)
+      ? Math.min(
+          ROUND_SECONDS,
+          getSecondsRemainingUntil(arena.expiresAt, adjustedNow)
+        )
       : ROUND_SECONDS;
   const activeType =
     arena.status === "active"
@@ -174,7 +177,7 @@ export function App() {
           </div>
           <div>
             <h1>Normies Type Button</h1>
-            <p>Shared 5:00 experiment</p>
+            <p>Shared 1:00 experiment</p>
           </div>
         </div>
         <div className="status-strip">
@@ -263,7 +266,7 @@ export function App() {
 
           <div className="result-line">
             {arena.status === "idle" && <span>Start the shared timer</span>}
-            {arena.status === "expired" && <span>The shared timer hit zero</span>}
+            {arena.status === "expired" && <span>Next round is starting</span>}
             {arena.status === "active" && !arena.visitorPressed && activeType && (
               <span>{activeType} window active</span>
             )}
