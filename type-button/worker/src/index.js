@@ -2,6 +2,8 @@ const ROUND_SECONDS = 60;
 const ROUND_MS = ROUND_SECONDS * 1000;
 const HISTORY_LIMIT = 24;
 const HISTORY_STORAGE_KEY = "pressHistory";
+const PENDING_NUMBER_STORAGE_KEY = "pendingNumber";
+const MAX_SUBMITTED_NUMBER = 9999;
 const TYPES = ["Human", "Cat", "Alien", "Agent", "Zombie"];
 const INITIAL_COUNTS = {
   Human: 0,
@@ -57,6 +59,13 @@ export class ArenaObject {
         return json(await this.pressButton(body.visitorId || ""));
       }
 
+      if (url.pathname === "/number" && request.method === "POST") {
+        const body = await readBody(request);
+        return json(
+          await this.submitNumber(body.visitorId || "", body.number)
+        );
+      }
+
       return json({ error: "Not found" }, 404);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -66,10 +75,7 @@ export class ArenaObject {
 
   async startRound(visitorId) {
     const now = Date.now();
-    const { round: normalized, changed } = normalizeRound(
-      await this.getRound(),
-      now
-    );
+    const { round: normalized, changed } = await this.normalizeRound(now);
     if (changed) {
       await this.saveRound(normalized);
     }
@@ -78,7 +84,7 @@ export class ArenaObject {
       return this.stateForVisitor(normalized, visitorId, now);
     }
 
-    const nextRound = createActiveRound(normalized.roundId + 1, now);
+    const nextRound = await this.createActiveRound(normalized.roundId + 1, now);
     await this.saveRound(nextRound);
     return this.stateForVisitor(nextRound, visitorId, now);
   }
@@ -89,7 +95,7 @@ export class ArenaObject {
     }
 
     const now = Date.now();
-    const { round, changed } = normalizeRound(await this.getRound(), now);
+    const { round, changed } = await this.normalizeRound(now);
     if (changed) {
       await this.saveRound(round);
     }
@@ -107,7 +113,7 @@ export class ArenaObject {
     const remainingSeconds = secondsRemaining(round.expiresAt, now);
     const type = typeForSecondsRemaining(remainingSeconds);
     if (!type) {
-      const nextRound = createActiveRound(round.roundId + 1, now);
+      const nextRound = await this.createActiveRound(round.roundId + 1, now);
       await this.saveRound(nextRound);
       return this.stateForVisitor(nextRound, visitorId, now);
     }
@@ -138,9 +144,32 @@ export class ArenaObject {
     return this.stateForVisitor(nextRound, visitorId, now, recentPresses);
   }
 
+  async submitNumber(visitorId, submittedNumber) {
+    if (!visitorId) {
+      throw new Error("Missing visitor id");
+    }
+
+    const now = Date.now();
+    const value = parseSubmittedNumber(submittedNumber);
+    const pendingNumber = {
+      value,
+      visitorTag: visitorTag(visitorId),
+      timestamp: new Date(now).toISOString()
+    };
+
+    await this.state.storage.put(PENDING_NUMBER_STORAGE_KEY, pendingNumber);
+
+    const { round, changed } = await this.normalizeRound(now);
+    if (changed) {
+      await this.saveRound(round);
+    }
+
+    return this.stateForVisitor(round, visitorId, now);
+  }
+
   async readState(visitorId) {
     const now = Date.now();
-    const { round, changed } = normalizeRound(await this.getRound(), now);
+    const { round, changed } = await this.normalizeRound(now);
     if (changed) {
       await this.saveRound(round);
     }
@@ -157,6 +186,7 @@ export class ArenaObject {
       recentPresses || (await this.getHistory()),
       round
     );
+    const pendingNumber = await this.getPendingNumber();
 
     return {
       status: round.status,
@@ -170,6 +200,8 @@ export class ArenaObject {
       pressCounts: round.pressCounts,
       lastPress: round.lastPress,
       recentPresses: history,
+      featuredNumber: normalizeNumberRecord(round.featuredNumber),
+      pendingNumber,
       visitorPressed: Boolean(visitorPress),
       visitorRun: visitorPress
         ? {
@@ -190,6 +222,54 @@ export class ArenaObject {
 
   async saveRound(round) {
     await this.state.storage.put("round", round);
+  }
+
+  async normalizeRound(now) {
+    const normalized = normalizeRoundShape(await this.getRound());
+
+    if (normalized.status === "expired") {
+      return {
+        round: await this.createActiveRound(normalized.roundId + 1, now),
+        changed: true
+      };
+    }
+
+    if (normalized.status === "active") {
+      if (!normalized.expiresAt || normalized.expiresAt <= now) {
+        return {
+          round: await this.createActiveRound(normalized.roundId + 1, now),
+          changed: true
+        };
+      }
+
+      if (normalized.expiresAt - now > ROUND_MS) {
+        return {
+          round: { ...normalized, expiresAt: now + ROUND_MS },
+          changed: true
+        };
+      }
+    }
+
+    return { round: normalized, changed: false };
+  }
+
+  async createActiveRound(roundId, now) {
+    const featuredNumber = await this.consumePendingNumber();
+    return createActiveRound(roundId, now, featuredNumber);
+  }
+
+  async getPendingNumber() {
+    return normalizeNumberRecord(
+      await this.state.storage.get(PENDING_NUMBER_STORAGE_KEY)
+    );
+  }
+
+  async consumePendingNumber() {
+    const pendingNumber = await this.getPendingNumber();
+    if (pendingNumber) {
+      await this.state.storage.delete(PENDING_NUMBER_STORAGE_KEY);
+    }
+    return pendingNumber;
   }
 
   async getHistory() {
@@ -213,52 +293,30 @@ function defaultRound() {
     expiresAt: null,
     totalPresses: 0,
     pressCounts: { ...INITIAL_COUNTS },
-    lastPress: null
+    lastPress: null,
+    featuredNumber: null
   };
 }
 
-function createActiveRound(roundId, now) {
+function createActiveRound(roundId, now, featuredNumber = null) {
   return {
     status: "active",
     roundId,
     expiresAt: now + ROUND_MS,
     totalPresses: 0,
     pressCounts: { ...INITIAL_COUNTS },
-    lastPress: null
+    lastPress: null,
+    featuredNumber: normalizeNumberRecord(featuredNumber)
   };
 }
 
-function normalizeRound(round, now) {
-  const normalized = {
+function normalizeRoundShape(round) {
+  return {
     ...defaultRound(),
     ...round,
-    pressCounts: { ...INITIAL_COUNTS, ...(round.pressCounts || {}) }
+    pressCounts: { ...INITIAL_COUNTS, ...(round.pressCounts || {}) },
+    featuredNumber: normalizeNumberRecord(round.featuredNumber)
   };
-
-  if (normalized.status === "expired") {
-    return {
-      round: createActiveRound(normalized.roundId + 1, now),
-      changed: true
-    };
-  }
-
-  if (normalized.status === "active") {
-    if (!normalized.expiresAt || normalized.expiresAt <= now) {
-      return {
-        round: createActiveRound(normalized.roundId + 1, now),
-        changed: true
-      };
-    }
-
-    if (normalized.expiresAt - now > ROUND_MS) {
-      return {
-        round: { ...normalized, expiresAt: now + ROUND_MS },
-        changed: true
-      };
-    }
-  }
-
-  return { round: normalized, changed: false };
 }
 
 function normalizeHistory(history, round) {
@@ -291,6 +349,37 @@ function typeForSecondsRemaining(seconds) {
   if (seconds >= 25) return "Alien";
   if (seconds >= 13) return "Agent";
   return "Zombie";
+}
+
+function parseSubmittedNumber(value) {
+  const number = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(number) || number < 0 || number > MAX_SUBMITTED_NUMBER) {
+    throw new Error(`Number must be between 0 and ${MAX_SUBMITTED_NUMBER}`);
+  }
+  return number;
+}
+
+function normalizeNumberRecord(value) {
+  if (!value || typeof value !== "object") return null;
+
+  const candidate = value;
+  if (
+    !Number.isInteger(candidate.value) ||
+    candidate.value < 0 ||
+    candidate.value > MAX_SUBMITTED_NUMBER
+  ) {
+    return null;
+  }
+
+  return {
+    value: candidate.value,
+    visitorTag:
+      typeof candidate.visitorTag === "string" ? candidate.visitorTag : "----",
+    timestamp:
+      typeof candidate.timestamp === "string"
+        ? candidate.timestamp
+        : new Date(0).toISOString()
+  };
 }
 
 function secondsRemaining(expiresAt, now) {

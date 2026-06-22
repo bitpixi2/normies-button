@@ -10,6 +10,8 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Added a global live history feed backed by Durable Object storage. It keeps recent presses across round rollovers and shows Type, waited time, remaining time, round, and visitor tag.
 - Clarified the one-press-per-round lockout in the result line and disabled button label so pressed players know they must wait for the next round.
 - Lightened the pixel font weight to improve `5` and `C` readability, capped the visible history feed at the latest 5 rows, and added a right-panel flash while syncing plus a row flash when a new history entry lands.
+- Added a shared next-round number queue in the right panel. Submitted numbers show on the following round, with current and pending number state stored in the Worker.
+- Swapped the main button to generated raster button crops and added a custom pixel cursor asset.
 
 ## TODO
 - None currently known.

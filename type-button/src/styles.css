@@ -23,9 +23,15 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  cursor: url("/assets/cursor-pixel.svg") 2 2, auto;
 }
 
 button {
+  font: inherit;
+  cursor: url("/assets/cursor-pixel.svg") 2 2, pointer;
+}
+
+input {
   font: inherit;
 }
 
@@ -304,7 +310,7 @@ h2 {
   background: transparent;
   color: #111111;
   font-weight: 500;
-  cursor: pointer;
+  cursor: url("/assets/cursor-pixel.svg") 2 2, pointer;
   transition:
     transform 120ms ease,
     opacity 120ms ease;
@@ -320,35 +326,30 @@ h2 {
 
 .button-core:disabled {
   cursor: not-allowed;
-  opacity: 0.66;
+  opacity: 0.82;
 }
 
-.button-stack-sprite {
+.generated-button-sprite {
   position: absolute;
-  inset: 0;
+  inset: -8px;
   width: 100%;
   height: 100%;
-  color: #111111;
-  fill: currentColor;
-  overflow: visible;
+  background-image: url("/assets/button-stack-generated.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  clip-path: ellipse(47% 44% at 50% 52%);
+  filter: grayscale(1) contrast(1.14);
+  image-rendering: pixelated;
+  mix-blend-mode: multiply;
+  transition: transform 120ms steps(2, end);
 }
 
-.button-sprite-shadow {
-  opacity: 0.18;
-  transform: translate(4px, 5px);
-}
-
-.button-sprite-layer,
-.button-sprite-top {
-  fill: #111111;
-}
-
-.button-sprite-cut {
-  fill: #ffffff;
-}
-
-.sprite-pressed {
-  transform: translateY(5px);
+.button-core:active:not(:disabled) .generated-button-sprite,
+.button-core.is-pressed .generated-button-sprite {
+  background-image: url("/assets/button-stack-pressed-generated.png");
+  clip-path: ellipse(47% 40% at 50% 52%);
+  transform: translateY(10px) scale(0.94);
 }
 
 .button-action-label {
@@ -356,7 +357,7 @@ h2 {
   z-index: 1;
   display: grid;
   max-width: 120px;
-  transform: translateY(-30px);
+  transform: translateY(-42px);
   place-items: center;
   color: #ffffff;
   font-size: 1.2rem;
@@ -453,6 +454,85 @@ h2 {
 
 .metric strong {
   font-variant-numeric: tabular-nums;
+}
+
+.number-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  background: #ffffff;
+}
+
+.number-panel-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.number-panel-top div {
+  display: grid;
+  gap: 3px;
+}
+
+.number-panel-top strong {
+  color: var(--ink);
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.number-panel-top > span,
+.number-help,
+.number-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.number-form {
+  display: grid;
+  gap: 6px;
+}
+
+.number-form label {
+  color: var(--ink);
+  font-size: 0.92rem;
+  text-transform: uppercase;
+}
+
+.number-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.number-entry input,
+.number-entry button {
+  min-height: 38px;
+  border: 2px solid var(--ink);
+  background: #ffffff;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.number-entry input {
+  min-width: 0;
+  padding: 7px 9px;
+}
+
+.number-entry button {
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.number-entry button:disabled {
+  opacity: 0.62;
+}
+
+.number-status {
+  min-height: 1em;
+  color: var(--ink);
 }
 
 .history-heading {
@@ -644,13 +724,17 @@ h2 {
   }
 
   .button-action-label {
-    transform: translateY(-24px);
+    transform: translateY(-34px);
     font-size: 1rem;
   }
 
   .button-action-label svg {
     width: 26px;
     height: 26px;
+  }
+
+  .number-panel-top strong {
+    font-size: 1.45rem;
   }
 
   .history-run {

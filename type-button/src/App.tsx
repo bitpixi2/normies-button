@@ -13,6 +13,7 @@ import {
   pressArena,
   startArena,
   ensureVisitorId,
+  submitRoundNumber,
   visitorTag,
   type ArenaPress,
   type ArenaState
@@ -25,7 +26,6 @@ import {
 import {
   PixelArrow,
   PixelIcon,
-  StackedButtonSprite,
   TypeGlyph
 } from "./pixelSprites";
 
@@ -45,6 +45,9 @@ export function App() {
   const [nowMs, setNowMs] = useState(Date.now());
   const [apiMessage, setApiMessage] = useState("Connecting");
   const [isBusy, setIsBusy] = useState(false);
+  const [numberInput, setNumberInput] = useState("");
+  const [numberMessage, setNumberMessage] = useState("");
+  const [isNumberBusy, setIsNumberBusy] = useState(false);
   const [flashedPressKey, setFlashedPressKey] = useState<string | null>(null);
   const flashTimeoutRef = useRef<number | null>(null);
 
@@ -152,7 +155,9 @@ export function App() {
         visitorPressed: arena.visitorPressed,
         visitorType: ownType,
         lastPress: arena.lastPress,
-        recentPresses
+        recentPresses,
+        featuredNumber: arena.featuredNumber,
+        pendingNumber: arena.pendingNumber
       });
 
     window.render_game_to_text = renderGameToText;
@@ -205,6 +210,30 @@ export function App() {
       setApiMessage("Shared timer offline");
     } finally {
       setIsBusy(false);
+    }
+  };
+
+  const handleNumberSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isNumberBusy) return;
+
+    const parsedNumber = Number.parseInt(numberInput, 10);
+    if (!Number.isInteger(parsedNumber) || parsedNumber < 0 || parsedNumber > 9999) {
+      setNumberMessage("Use a number from 0 to 9999");
+      return;
+    }
+
+    setIsNumberBusy(true);
+    setNumberMessage("Queueing");
+    try {
+      const state = await submitRoundNumber(visitorId, parsedNumber);
+      setArena(state);
+      setNumberInput("");
+      setNumberMessage(`#${formatSubmittedNumber(parsedNumber)} queued for round ${state.roundId + 1}`);
+    } catch {
+      setNumberMessage("Queue failed");
+    } finally {
+      setIsNumberBusy(false);
     }
   };
 
@@ -284,7 +313,11 @@ export function App() {
               </div>
               <div className="clock">{formatClock(displayedRemaining)}</div>
               <button
-                className="button-core"
+                className={`button-core ${
+                  arena.status === "active" && arena.visitorPressed
+                    ? "is-pressed"
+                    : ""
+                }`}
                 type="button"
                 onClick={handleAction}
                 aria-label={actionLabel}
@@ -292,10 +325,7 @@ export function App() {
                   isBusy || (arena.status === "active" && arena.visitorPressed)
                 }
               >
-                <StackedButtonSprite
-                  className="button-stack-sprite"
-                  pressed={arena.status === "active" && arena.visitorPressed}
-                />
+                <span className="generated-button-sprite" aria-hidden="true" />
                 <span className="button-action-label">
                   <PixelIcon name={actionIcon} />
                   <span>{isBusy ? "Sync" : actionLabel}</span>
@@ -354,6 +384,52 @@ export function App() {
             />
           </div>
 
+          <section className="number-panel" aria-label="Next round number">
+            <div className="number-panel-top">
+              <div>
+                <span className="eyebrow">This Round's #</span>
+                <strong>
+                  {arena.featuredNumber
+                    ? `#${formatSubmittedNumber(arena.featuredNumber.value)}`
+                    : "--"}
+                </strong>
+              </div>
+              <span>
+                {arena.featuredNumber
+                  ? `by #${arena.featuredNumber.visitorTag}`
+                  : "none"}
+              </span>
+            </div>
+
+            <form className="number-form" onSubmit={handleNumberSubmit}>
+              <label htmlFor="round-number">Send In #</label>
+              <div className="number-entry">
+                <input
+                  id="round-number"
+                  inputMode="numeric"
+                  max="9999"
+                  min="0"
+                  onChange={(event) => setNumberInput(event.target.value)}
+                  placeholder="0-9999"
+                  type="number"
+                  value={numberInput}
+                />
+                <button type="submit" disabled={isNumberBusy}>
+                  {isNumberBusy ? "..." : "Send"}
+                </button>
+              </div>
+            </form>
+
+            <div className="number-help">
+              It will show when round {arena.roundId + 1} starts, not this round.
+            </div>
+            <div className="number-status" aria-live="polite">
+              {arena.pendingNumber
+                ? `Next: #${formatSubmittedNumber(arena.pendingNumber.value)} by #${arena.pendingNumber.visitorTag}`
+                : numberMessage || "No # queued"}
+            </div>
+          </section>
+
           <div className="history-heading">
             <span className="eyebrow">Live History</span>
             <span>latest {HISTORY_VISIBLE_LIMIT}</span>
@@ -400,6 +476,10 @@ function buttonLabel(arena: ArenaState): string {
 
 function historyPressKey(press: ArenaPress): string {
   return `${press.roundId}-${press.timestamp}-${press.visitorTag}`;
+}
+
+function formatSubmittedNumber(value: number): string {
+  return value.toString().padStart(4, "0");
 }
 
 function Metric({

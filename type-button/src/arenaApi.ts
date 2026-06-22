@@ -28,6 +28,12 @@ export type ArenaPress = {
   visitorTag: string;
 };
 
+export type ArenaNumber = {
+  value: number;
+  visitorTag: string;
+  timestamp: string;
+};
+
 export type ArenaState = {
   status: ArenaStatus;
   roundId: number;
@@ -39,6 +45,8 @@ export type ArenaState = {
   pressCounts: Record<NormieType, number>;
   lastPress: ArenaPress | null;
   recentPresses: ArenaPress[];
+  featuredNumber: ArenaNumber | null;
+  pendingNumber: ArenaNumber | null;
   visitorPressed: boolean;
   visitorRun: RunRecord | null;
 };
@@ -78,6 +86,8 @@ export function fallbackArenaState(visitorId: string): ArenaState {
     },
     lastPress: null,
     recentPresses: [],
+    featuredNumber: null,
+    pendingNumber: null,
     visitorPressed: false,
     visitorRun: null
   };
@@ -93,6 +103,13 @@ export async function startArena(visitorId: string): Promise<ArenaState> {
 
 export async function pressArena(visitorId: string): Promise<ArenaState> {
   return requestArena("/press", { visitorId });
+}
+
+export async function submitRoundNumber(
+  visitorId: string,
+  number: number
+): Promise<ArenaState> {
+  return requestArena("/number", { visitorId, number });
 }
 
 async function requestArena(path: string, body?: unknown): Promise<ArenaState> {
