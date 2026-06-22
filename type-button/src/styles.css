@@ -76,15 +76,19 @@ p {
   margin: 0;
 }
 
+strong {
+  font-weight: 500;
+}
+
 h1 {
   font-size: 1.45rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.1;
 }
 
 h2 {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.15;
 }
 
@@ -112,7 +116,7 @@ h2 {
   background: var(--panel);
   color: var(--ink);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
 }
 
@@ -146,7 +150,7 @@ h2 {
 
 .eyebrow {
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -154,7 +158,7 @@ h2 {
 .type-readout {
   color: var(--ink);
   font-size: 4rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -245,7 +249,7 @@ h2 {
 
 .stack-row strong {
   font-size: 1.12rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .stack-row span,
@@ -286,7 +290,7 @@ h2 {
   color: #111111;
   font-variant-numeric: tabular-nums;
   font-size: 5.4rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -299,7 +303,7 @@ h2 {
   border: 0;
   background: transparent;
   color: #111111;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition:
     transform 120ms ease,
@@ -381,7 +385,7 @@ h2 {
   border: 2px solid var(--ink);
   background: #ffffff;
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 500;
   text-align: center;
 }
 
@@ -390,6 +394,10 @@ h2 {
   align-content: start;
   gap: 16px;
   padding: 18px;
+}
+
+.scoreboard.is-loading-history {
+  animation: history-panel-sync 420ms steps(2, end) infinite;
 }
 
 .score-heading {
@@ -464,6 +472,8 @@ h2 {
 .history-list {
   display: grid;
   gap: 8px;
+  max-height: 292px;
+  overflow: hidden;
 }
 
 .history-run,
@@ -477,6 +487,10 @@ h2 {
   border: 2px solid var(--ink);
   background: #ffffff;
   font-size: 0.9rem;
+}
+
+.history-run.is-new {
+  animation: history-row-flash 900ms steps(2, end);
 }
 
 .history-main,
@@ -510,6 +524,41 @@ h2 {
   height: 10px;
   border: 2px solid #111111;
   background: #ffffff;
+}
+
+@keyframes history-panel-sync {
+  0%,
+  100% {
+    box-shadow: 8px 8px 0 #111111;
+  }
+
+  50% {
+    box-shadow: 12px 8px 0 #111111;
+  }
+}
+
+@keyframes history-row-flash {
+  0%,
+  35% {
+    background: #111111;
+    color: #ffffff;
+  }
+
+  36%,
+  70% {
+    background: #ffffff;
+    color: #111111;
+  }
+
+  71%,
+  100% {
+    background: #111111;
+    color: #ffffff;
+  }
+}
+
+.history-run.is-new span {
+  color: currentColor;
 }
 
 @media (max-width: 980px) {
@@ -611,5 +660,9 @@ h2 {
   .history-main span,
   .history-times span {
     font-size: 0.74rem;
+  }
+
+  .history-list {
+    max-height: 292px;
   }
 }

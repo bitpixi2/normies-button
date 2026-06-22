@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ROUND_SECONDS,
   TYPE_WINDOWS,
@@ -14,6 +14,7 @@ import {
   startArena,
   ensureVisitorId,
   visitorTag,
+  type ArenaPress,
   type ArenaState
 } from "./arenaApi";
 import {
@@ -29,6 +30,8 @@ import {
 } from "./pixelSprites";
 
 const POLL_MS = 1000;
+const HISTORY_VISIBLE_LIMIT = 5;
+const HISTORY_FLASH_MS = 900;
 
 export function App() {
   const visitorId = useMemo(() => ensureVisitorId(), []);
@@ -42,6 +45,8 @@ export function App() {
   const [nowMs, setNowMs] = useState(Date.now());
   const [apiMessage, setApiMessage] = useState("Connecting");
   const [isBusy, setIsBusy] = useState(false);
+  const [flashedPressKey, setFlashedPressKey] = useState<string | null>(null);
+  const flashTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,7 +124,7 @@ export function App() {
   const recentPresses = useMemo(
     () =>
       arena.recentPresses?.length > 0
-        ? arena.recentPresses.slice(0, 8)
+        ? arena.recentPresses.slice(0, HISTORY_VISIBLE_LIMIT)
         : arena.lastPress
           ? [arena.lastPress]
           : [],
@@ -158,6 +163,26 @@ export function App() {
     };
   }, [activeType, arena, displayedRemaining, ownType, recentPresses]);
 
+  useEffect(() => {
+    return () => {
+      if (flashTimeoutRef.current !== null) {
+        window.clearTimeout(flashTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const flashHistoryPress = (press: ArenaPress) => {
+    if (flashTimeoutRef.current !== null) {
+      window.clearTimeout(flashTimeoutRef.current);
+    }
+
+    setFlashedPressKey(historyPressKey(press));
+    flashTimeoutRef.current = window.setTimeout(() => {
+      setFlashedPressKey(null);
+      flashTimeoutRef.current = null;
+    }, HISTORY_FLASH_MS);
+  };
+
   const handleAction = async () => {
     if (isBusy || (arena.status === "active" && arena.visitorPressed)) {
       return;
@@ -171,6 +196,11 @@ export function App() {
           : await startArena(visitorId);
       setArena(state);
       setApiMessage("Multiplayer live");
+
+      const latestPress = state.recentPresses?.[0] ?? state.lastPress;
+      if (latestPress) {
+        flashHistoryPress(latestPress);
+      }
     } catch {
       setApiMessage("Shared timer offline");
     } finally {
@@ -288,7 +318,10 @@ export function App() {
           </div>
         </section>
 
-        <section className="scoreboard" aria-label="Shared standings">
+        <section
+          className={`scoreboard ${isBusy ? "is-loading-history" : ""}`}
+          aria-label="Shared standings"
+        >
           <div className="score-heading">
             <div>
               <span className="eyebrow">Shared</span>
@@ -323,14 +356,16 @@ export function App() {
 
           <div className="history-heading">
             <span className="eyebrow">Live History</span>
-            <span>wait / left</span>
+            <span>latest {HISTORY_VISIBLE_LIMIT}</span>
           </div>
 
           <div className="history-list">
             {recentPresses.map((press, index) => (
               <div
-                className="history-run"
-                key={`${press.roundId ?? arena.roundId}-${press.timestamp}-${press.visitorTag}-${index}`}
+                className={`history-run ${
+                  flashedPressKey === historyPressKey(press) ? "is-new" : ""
+                }`}
+                key={`${historyPressKey(press)}-${index}`}
               >
                 <span className="run-dot" />
                 <div className="history-main">
@@ -361,6 +396,10 @@ function buttonLabel(arena: ArenaState): string {
   if (arena.status === "active") return "Press";
   if (arena.status === "expired") return "Revive";
   return "Start";
+}
+
+function historyPressKey(press: ArenaPress): string {
+  return `${press.roundId}-${press.timestamp}-${press.visitorTag}`;
 }
 
 function Metric({
