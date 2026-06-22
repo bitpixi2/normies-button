@@ -278,10 +278,12 @@ export function App() {
             {arena.status === "idle" && <span>Start the shared timer</span>}
             {arena.status === "expired" && <span>Next round is starting</span>}
             {arena.status === "active" && !arena.visitorPressed && activeType && (
-              <span>{activeType} window active</span>
+              <span>{activeType} window active. One press this round</span>
             )}
             {arena.status === "active" && arena.visitorPressed && ownType && (
-              <span>You pressed as {ownType}</span>
+              <span>
+                You pressed as {ownType}. Wait for round {arena.roundId + 1}
+              </span>
             )}
           </div>
         </section>
@@ -355,7 +357,7 @@ export function App() {
 }
 
 function buttonLabel(arena: ArenaState): string {
-  if (arena.status === "active" && arena.visitorPressed) return "Pressed";
+  if (arena.status === "active" && arena.visitorPressed) return "Wait";
   if (arena.status === "active") return "Press";
   if (arena.status === "expired") return "Revive";
   return "Start";
