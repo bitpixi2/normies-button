@@ -24,8 +24,7 @@ import {
 } from "./normiesApi";
 import {
   PixelArrow,
-  PixelIcon,
-  TypeGlyph
+  PixelIcon
 } from "./pixelSprites";
 
 const POLL_MS = 1000;
@@ -214,13 +213,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand-lockup">
-          <div className="brand-mark">
-            <PixelIcon name="button" />
-          </div>
-          <div>
-            <h1>Normies Type Button</h1>
-            <p>Shared 1:00 experiment</p>
-          </div>
+          <h1>The Normies Button</h1>
         </div>
       </header>
 
@@ -259,7 +252,6 @@ export function App() {
                         width="48"
                         height="48"
                       />
-                      <TypeGlyph className="type-glyph" type={window.type} />
                     </div>
                     <strong>{window.type}</strong>
                     <span>
