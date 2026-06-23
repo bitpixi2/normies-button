@@ -71,8 +71,8 @@ input {
     right 14px bottom 14px;
   background-repeat: no-repeat;
   background-size:
-    clamp(80px, 11vw, 155px) auto,
-    clamp(80px, 11vw, 155px) auto,
+    clamp(120px, 16.5vw, 232px) auto,
+    clamp(120px, 16.5vw, 232px) auto,
     clamp(80px, 11vw, 155px) auto,
     clamp(80px, 11vw, 155px) auto;
   content: "";
@@ -673,8 +673,8 @@ h2 {
       left -26px bottom 4px,
       right -26px bottom 4px;
     background-size:
-      75px auto,
-      75px auto,
+      112px auto,
+      112px auto,
       75px auto,
       75px auto;
     opacity: 0.15;

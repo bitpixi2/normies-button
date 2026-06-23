@@ -27,6 +27,7 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Replaced the HUD corner filigrees with the newer corner-only sheet and vertically centered the desktop module layout within the viewport.
 - Reduced all four background corner filigrees to roughly half size with matched top and bottom sizing.
 - Added a five-minute inactivity pause that darkens the screen, stops arena polling, and resumes with an immediate state sync from a centered Resume module.
+- Increased only the upper-left and upper-right background filigree render size so their shorter source crops visually match the lower corner sprites.
 
 ## TODO
 - None currently known.
