@@ -29,7 +29,9 @@ import {
 
 const POLL_MS = 1000;
 const HISTORY_VISIBLE_LIMIT = 5;
+const MOBILE_HISTORY_VISIBLE_LIMIT = 3;
 const HISTORY_FLASH_MS = 900;
+const BUTTON_TAP_FEEDBACK_MS = 180;
 
 export function App() {
   const visitorId = useMemo(() => ensureVisitorId(), []);
@@ -42,7 +44,9 @@ export function App() {
   const [numberInput, setNumberInput] = useState("");
   const [isNumberBusy, setIsNumberBusy] = useState(false);
   const [flashedPressKey, setFlashedPressKey] = useState<string | null>(null);
+  const [isButtonTapping, setIsButtonTapping] = useState(false);
   const flashTimeoutRef = useRef<number | null>(null);
+  const tapTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +155,9 @@ export function App() {
       if (flashTimeoutRef.current !== null) {
         window.clearTimeout(flashTimeoutRef.current);
       }
+      if (tapTimeoutRef.current !== null) {
+        window.clearTimeout(tapTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -171,6 +178,7 @@ export function App() {
       return;
     }
 
+    triggerButtonFeedback();
     setIsBusy(true);
     try {
       const state =
@@ -188,6 +196,22 @@ export function App() {
     } finally {
       setIsBusy(false);
     }
+  };
+
+  const triggerButtonFeedback = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(20);
+    }
+
+    if (tapTimeoutRef.current !== null) {
+      window.clearTimeout(tapTimeoutRef.current);
+    }
+
+    setIsButtonTapping(true);
+    tapTimeoutRef.current = window.setTimeout(() => {
+      setIsButtonTapping(false);
+      tapTimeoutRef.current = null;
+    }, BUTTON_TAP_FEEDBACK_MS);
   };
 
   const handleNumberSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -284,12 +308,22 @@ export function App() {
                 />
               </div>
               <div className="clock">{formatClock(displayedRemaining)}</div>
+              {activeTypeGlyph && (
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="button-type-echo"
+                  height="96"
+                  src={activeTypeGlyph}
+                  width="96"
+                />
+              )}
               <button
                 className={`button-core ${
                   arena.status === "active" && arena.visitorPressed
                     ? "is-pressed"
                     : ""
-                }`}
+                } ${isButtonTapping ? "is-tapping" : ""}`}
                 type="button"
                 onClick={handleAction}
                 aria-label={actionLabel}
@@ -365,7 +399,12 @@ export function App() {
 
           <div className="history-heading">
             <span className="eyebrow">Live History</span>
-            <span>latest {HISTORY_VISIBLE_LIMIT}</span>
+            <span className="history-limit history-limit-wide">
+              latest {HISTORY_VISIBLE_LIMIT}
+            </span>
+            <span className="history-limit history-limit-mobile">
+              latest {MOBILE_HISTORY_VISIBLE_LIMIT}
+            </span>
           </div>
 
           <div className="history-list">

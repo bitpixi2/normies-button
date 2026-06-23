@@ -318,6 +318,10 @@ h2 {
   transform: translateY(10px);
 }
 
+.button-core.is-tapping:not(:disabled) {
+  transform: translateY(10px) scaleY(0.94);
+}
+
 .button-core:disabled {
   cursor: not-allowed;
   opacity: 0.82;
@@ -357,6 +361,11 @@ h2 {
   pointer-events: none;
   text-align: center;
   text-transform: uppercase;
+}
+
+.button-type-echo {
+  display: none;
+  image-rendering: pixelated;
 }
 
 .button-core:focus-visible,
@@ -502,10 +511,14 @@ h2 {
   padding-top: 2px;
 }
 
-.history-heading span:last-child {
+.history-limit {
   font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   text-transform: uppercase;
+}
+
+.history-limit-mobile {
+  display: none;
 }
 
 .history-list {
@@ -717,16 +730,95 @@ h2 {
     font-size: 1rem;
   }
 
+  .button-type-echo {
+    display: block;
+    width: 34px;
+    height: 34px;
+    margin-block: -10px -18px;
+    opacity: 0.58;
+  }
+
+  .scoreboard {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .metric {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .metric svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .number-panel {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .number-entry {
+    grid-template-columns: minmax(0, 1fr) 62px;
+    gap: 6px;
+  }
+
+  .number-entry input,
+  .number-entry button {
+    min-height: 34px;
+  }
+
   .history-run {
-    grid-template-columns: 12px minmax(66px, 1fr) auto;
+    grid-template-columns: 10px minmax(66px, 1fr) auto;
+    min-height: 42px;
+    padding: 7px 8px;
+    font-size: 0.82rem;
   }
 
   .history-main span,
   .history-times span {
-    font-size: 0.74rem;
+    font-size: 0.68rem;
   }
 
   .history-list {
-    max-height: 292px;
+    gap: 6px;
+    max-height: 146px;
+  }
+
+  .history-run:nth-of-type(n + 4) {
+    display: none;
+  }
+
+  .history-limit-wide {
+    display: none;
+  }
+
+  .history-limit-mobile {
+    display: inline;
+  }
+
+  .run-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .stack-row {
+    min-height: 54px;
+    padding: 6px 8px;
+  }
+
+  .stack-row strong {
+    font-size: 1rem;
+  }
+
+  .stack-row span,
+  .stack-row em {
+    font-size: 0.78rem;
+  }
+
+  .normie-tile,
+  .normie-tile img {
+    width: 40px;
+    height: 40px;
   }
 }
