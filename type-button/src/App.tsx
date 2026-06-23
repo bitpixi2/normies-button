@@ -211,23 +211,18 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand-lockup">
-          <h1 className="brand-logo-title">
-            <img
-              alt="Normies Button"
-              className="brand-logo"
-              height="252"
-              src="/assets/normies-button-logo.png"
-              width="760"
-            />
-          </h1>
-        </div>
-      </header>
-
       <main className="layout">
         <section className="arena" aria-label="Current Type window">
-          <div className="arena-copy">
+          <div className="arena-header">
+            <h1 className="brand-logo-title">
+              <img
+                alt="Normies Button"
+                className="brand-logo"
+                height="353"
+                src="/assets/normies-button-logo.png"
+                width="760"
+              />
+            </h1>
             <div className="type-readout">
               {arena.status === "active" ? activeType ?? "None" : "Ready"}
             </div>

@@ -19,6 +19,8 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Simplified the header to "Normies Button" and removed the extra brand icon/subtitle. Removed Type glyph overlays from Normies API image tiles.
 - Removed the visible "Current window" and "Shared" micro-labels to reduce text clutter.
 - Corrected the generated branding to Normies-specific assets: "Normies Button" logo with a pressable stacked-button motif and a transparent HUD filigree layer using push-button and Type glyph motifs. The mistaken Dead and Breakfast assets were removed from this repo.
+- Reworked the HUD filigree usage to four responsive corner-only sprite assets so the generated buttons and ornaments stay visible around the layout instead of sitting faintly under the panels.
+- Moved the Normies Button logo into the arena module and changed the active Type label to a right-aligned readout in that same module header.
 
 ## TODO
 - None currently known.
