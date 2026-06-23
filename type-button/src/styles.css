@@ -638,14 +638,21 @@ h2 {
     width: min(190px, 66vw);
   }
 
+  .brand-logo-title {
+    justify-self: center;
+  }
+
   .arena {
     min-height: 560px;
     padding: 18px;
   }
 
   .type-readout {
+    justify-content: center;
+    justify-self: center;
     font-size: 2.55rem;
     gap: 10px;
+    text-align: center;
   }
 
   .active-type-glyph {
@@ -660,14 +667,21 @@ h2 {
 
   .clock {
     font-size: 4rem;
+    text-align: center;
   }
 
   .button-core {
+    justify-self: center;
     width: 176px;
     height: 176px;
   }
 
+  .clock-shell {
+    order: 1;
+  }
+
   .stack-wrap {
+    order: 2;
     padding-left: 34px;
   }
 

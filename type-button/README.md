@@ -1,4 +1,4 @@
-# Normies Type Button
+# Normies Button
 
 **A global one-minute button game for the Normies Hackathon.**
 

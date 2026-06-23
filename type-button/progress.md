@@ -22,6 +22,7 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Reworked the HUD filigree usage to four responsive corner-only sprite assets so the generated buttons and ornaments stay visible around the layout instead of sitting faintly under the panels.
 - Moved the Normies Button logo into the arena module and changed the active Type label to a right-aligned readout in that same module header.
 - Replaced the main button raster with a rounded logo-matched pixel plunger plus a compressed depressed state, regenerated sharper corner filigree from the reference sheet, moved desktop modules lower, and added active Type glyph art beside the upper-right Type readout.
+- Renamed the README title to "Normies Button" and changed the mobile arena so the centered logo, Type readout, clock, and button appear before the Type stack.
 
 ## TODO
 - None currently known.
