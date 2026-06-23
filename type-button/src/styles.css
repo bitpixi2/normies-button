@@ -48,7 +48,9 @@ input {
 
 @media (min-width: 981px) {
   .app {
-    padding-top: clamp(56px, 5.2vh, 76px);
+    display: grid;
+    align-items: center;
+    padding-block: 24px;
   }
 }
 
