@@ -107,7 +107,8 @@ export class ArenaObject {
 
     const nextRound = await this.createActiveRound(
       startingRoundId(normalized),
-      now
+      now,
+      normalized
     );
     await this.saveRound(nextRound);
     return this.stateForVisitor(nextRound, visitorId, now);
@@ -237,8 +238,8 @@ export class ArenaObject {
       remainingSeconds: remaining,
       currentType:
         round.status === "active" ? typeForSecondsRemaining(remaining) : null,
-      totalPresses: round.totalPresses,
-      pressCounts: round.pressCounts,
+      totalPresses: stats.totalPresses,
+      pressCounts: stats.typeCounts,
       lastPress: round.lastPress,
       recentPresses: history,
       featuredNumber: normalizeNumberRecord(round.featuredNumber),
@@ -271,7 +272,7 @@ export class ArenaObject {
 
     if (normalized.status === "expired") {
       return {
-        round: await this.createActiveRound(normalized.roundId + 1, now),
+        round: await this.createActiveRound(normalized.roundId + 1, now, normalized),
         changed: true
       };
     }
@@ -279,7 +280,7 @@ export class ArenaObject {
     if (normalized.status === "active") {
       if (!normalized.expiresAt || normalized.expiresAt <= now) {
         return {
-          round: await this.createActiveRound(normalized.roundId + 1, now),
+          round: await this.createActiveRound(normalized.roundId + 1, now, normalized),
           changed: true
         };
       }
@@ -295,9 +296,9 @@ export class ArenaObject {
     return { round: normalized, changed: false };
   }
 
-  async createActiveRound(roundId, now) {
+  async createActiveRound(roundId, now, previousRound = null) {
     const featuredNumber = await this.consumePendingNumber();
-    return createActiveRound(roundId, now, featuredNumber);
+    return createActiveRound(roundId, now, featuredNumber, previousRound);
   }
 
   async getPendingNumber() {
@@ -555,13 +556,22 @@ function defaultRound() {
   };
 }
 
-function createActiveRound(roundId, now, featuredNumber = null) {
+function createActiveRound(
+  roundId,
+  now,
+  featuredNumber = null,
+  previousRound = null
+) {
+  const normalizedPrevious = previousRound
+    ? normalizeRoundShape(previousRound)
+    : defaultRound();
+
   return {
     status: "active",
     roundId,
     expiresAt: now + ROUND_MS,
-    totalPresses: 0,
-    pressCounts: { ...INITIAL_COUNTS },
+    totalPresses: normalizedPrevious.totalPresses,
+    pressCounts: { ...normalizedPrevious.pressCounts },
     lastPress: null,
     featuredNumber: normalizeNumberRecord(featuredNumber)
   };
