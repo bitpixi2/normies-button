@@ -534,20 +534,12 @@ export function App() {
           Privacy
         </button>
         <a
-          href="https://github.com/bitpixi2"
-          onPointerDown={triggerSoftHaptic}
-          rel="noreferrer"
-          target="_blank"
-        >
-          GitHub
-        </a>
-        <a
           href="https://github.com/bitpixi2/normies-button"
           onPointerDown={triggerSoftHaptic}
           rel="noreferrer"
           target="_blank"
         >
-          Repo
+          GitHub
         </a>
       </footer>
       {infoModal && (
