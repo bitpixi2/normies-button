@@ -710,9 +710,7 @@ function GlobalStats({ stats: rawStats }: { stats: ArenaState["stats"] }) {
     leadingCount: 0,
     leadMargin: 0
   };
-  const leadingCopy = stats.leadingType
-    ? `${pluralizeType(stats.leadingType)} leading by ${stats.leadMargin} ${pluralizePress(stats.leadMargin)}`
-    : "No Type leading yet";
+  const leadingCopy = formatGlobalLeadCopy(stats);
 
   return (
     <section className="global-leaderboard" aria-label="Global Leaderboard">
@@ -751,6 +749,28 @@ export function normalizeNormieIdInput(input: string): number | null {
   return value;
 }
 
+export function formatGlobalLeadCopy(stats: ArenaState["stats"]): string {
+  const rankedTypes = TYPE_WINDOWS.map(({ type }) => ({
+    type,
+    presses: stats.typeCounts[type] ?? 0
+  })).sort((a, b) => b.presses - a.presses);
+  const topCount = rankedTypes[0]?.presses ?? 0;
+
+  if (topCount <= 0) {
+    return "No Type leading yet";
+  }
+
+  const tiedTypes = rankedTypes
+    .filter((entry) => entry.presses === topCount)
+    .map((entry) => entry.type);
+
+  if (tiedTypes.length > 1) {
+    return `${formatTypeList(tiedTypes)} are tied at ${topCount} ${pluralizePress(topCount)}`;
+  }
+
+  return `${pluralizeType(tiedTypes[0])} leading by ${stats.leadMargin} ${pluralizePress(stats.leadMargin)}`;
+}
+
 function pluralizePress(count: number): string {
   return count === 1 ? "press" : "presses";
 }
@@ -762,4 +782,18 @@ function pluralizeCountry(count: number): string {
 function pluralizeType(type: string): string {
   if (type === "Zombie") return "Zombies";
   return `${type}s`;
+}
+
+function formatTypeList(types: string[]): string {
+  const pluralTypes = types.map(pluralizeType);
+
+  if (pluralTypes.length === 1) {
+    return pluralTypes[0];
+  }
+
+  if (pluralTypes.length === 2) {
+    return `${pluralTypes[0]} and ${pluralTypes[1]}`;
+  }
+
+  return `${pluralTypes.slice(0, -1).join(", ")}, and ${pluralTypes.at(-1)}`;
 }

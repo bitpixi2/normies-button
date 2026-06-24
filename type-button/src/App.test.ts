@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeNormieIdInput } from "./App";
+import { formatGlobalLeadCopy, normalizeNormieIdInput } from "./App";
 
 describe("Normie ID input", () => {
   it("accepts plain and hash-prefixed Normies IDs", () => {
@@ -15,5 +15,64 @@ describe("Normie ID input", () => {
     expect(normalizeNormieIdInput("1abc")).toBeNull();
     expect(normalizeNormieIdInput("0")).toBeNull();
     expect(normalizeNormieIdInput("10000")).toBeNull();
+  });
+});
+
+describe("Global leaderboard copy", () => {
+  it("reports a real leader with a positive margin", () => {
+    expect(
+      formatGlobalLeadCopy({
+        totalPresses: 8,
+        countryCount: 1,
+        typeCounts: {
+          Human: 5,
+          Cat: 3,
+          Alien: 0,
+          Agent: 0,
+          Zombie: 0
+        },
+        leadingType: "Human",
+        leadingCount: 5,
+        leadMargin: 2
+      })
+    ).toBe("Humans leading by 2 presses");
+  });
+
+  it("reports tied leaders instead of a zero-margin lead", () => {
+    expect(
+      formatGlobalLeadCopy({
+        totalPresses: 12,
+        countryCount: 1,
+        typeCounts: {
+          Human: 6,
+          Cat: 6,
+          Alien: 0,
+          Agent: 0,
+          Zombie: 0
+        },
+        leadingType: "Human",
+        leadingCount: 6,
+        leadMargin: 0
+      })
+    ).toBe("Humans and Cats are tied at 6 presses");
+  });
+
+  it("reports no leader before any global presses", () => {
+    expect(
+      formatGlobalLeadCopy({
+        totalPresses: 0,
+        countryCount: 0,
+        typeCounts: {
+          Human: 0,
+          Cat: 0,
+          Alien: 0,
+          Agent: 0,
+          Zombie: 0
+        },
+        leadingType: null,
+        leadingCount: 0,
+        leadMargin: 0
+      })
+    ).toBe("No Type leading yet");
   });
 });
