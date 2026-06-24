@@ -689,21 +689,23 @@ h2 {
   }
 
   .arena {
-    min-height: 560px;
+    min-height: auto;
+    align-content: start;
+    gap: 14px;
     padding: 18px;
   }
 
   .type-readout {
     justify-content: center;
     justify-self: center;
-    font-size: 2.55rem;
-    gap: 10px;
+    font-size: 1.85rem;
+    gap: 8px;
     text-align: center;
   }
 
   .active-type-glyph {
-    width: 46px;
-    height: 46px;
+    width: 36px;
+    height: 36px;
   }
 
   .arena-header {
@@ -712,18 +714,38 @@ h2 {
   }
 
   .clock {
-    font-size: 4rem;
+    font-size: 2.9rem;
     text-align: center;
   }
 
   .button-core {
+    order: 1;
     justify-self: center;
     width: 176px;
     height: 176px;
   }
 
+  .generated-button-sprite {
+    background-image: url("/assets/button-stack-mobile-transparent.png");
+  }
+
+  .button-core:active:not(:disabled) .generated-button-sprite,
+  .button-core.is-pressed .generated-button-sprite {
+    background-image: url("/assets/button-stack-pressed-mobile-transparent.png");
+  }
+
+  .progress-track {
+    order: 3;
+    width: min(100%, 360px);
+  }
+
   .clock-shell {
     order: 1;
+    gap: 10px;
+  }
+
+  .clock-shell .clock {
+    order: 2;
   }
 
   .stack-wrap {
