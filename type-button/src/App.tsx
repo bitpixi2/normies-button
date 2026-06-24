@@ -3,8 +3,7 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
-  type CSSProperties
+  useState
 } from "react";
 import {
   ROUND_SECONDS,
@@ -36,14 +35,7 @@ const TYPE_IMAGE_FLASH_MS = 1100;
 const BUTTON_TAP_FEEDBACK_MS = 180;
 const HAPTIC_STRONG_PATTERN = [35, 24, 35];
 const HAPTIC_SOFT_TAP_MS = 6;
-const CURSOR_TRAIL_LIMIT = 9;
-const CURSOR_TRAIL_MIN_DISTANCE = 7;
 type InfoModal = "terms" | "privacy" | null;
-type CursorTrailPoint = {
-  id: number;
-  x: number;
-  y: number;
-};
 
 const configuredIdlePauseMs = Number.parseInt(
   import.meta.env.VITE_IDLE_PAUSE_MS || "",
@@ -195,7 +187,6 @@ export function App() {
     [arena.lastPress, arena.recentPresses]
   );
   const actionLabel = buttonLabel(arena);
-  const visibleButtonLabel = arena.status === "active" ? "Press" : actionLabel;
 
   useEffect(() => {
     const renderGameToText = () =>
@@ -325,7 +316,6 @@ export function App() {
 
   return (
     <div className="app">
-      <CursorTrail />
       <main className="layout">
         <section className="arena" aria-label="Current Type window">
           <div className="arena-header">
@@ -338,6 +328,9 @@ export function App() {
                 width="760"
               />
             </h1>
+            <div className="header-clock" aria-live="polite">
+              {formatClock(displayedRemaining)}
+            </div>
             <div className="type-readout">
               {activeTypeGlyph && (
                 <img
@@ -409,9 +402,6 @@ export function App() {
                 disabled={isBusy}
               >
                 <span className="generated-button-sprite" aria-hidden="true" />
-                <span className="button-action-label">
-                  {visibleButtonLabel}
-                </span>
               </button>
             </div>
           </div>
@@ -617,110 +607,6 @@ function InfoDialog({
         </div>
         {isPrivacy ? <PrivacyCopy /> : <TermsCopy />}
       </section>
-    </div>
-  );
-}
-
-function CursorTrail() {
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [points, setPoints] = useState<CursorTrailPoint[]>([]);
-  const nextIdRef = useRef(0);
-  const lastPointRef = useRef<CursorTrailPoint | null>(null);
-  const pendingPointRef = useRef<CursorTrailPoint | null>(null);
-  const frameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const pointerQuery = window.matchMedia("(pointer: fine)");
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateEnabled = () =>
-      setIsEnabled(pointerQuery.matches && !motionQuery.matches);
-
-    updateEnabled();
-    pointerQuery.addEventListener("change", updateEnabled);
-    motionQuery.addEventListener("change", updateEnabled);
-    return () => {
-      pointerQuery.removeEventListener("change", updateEnabled);
-      motionQuery.removeEventListener("change", updateEnabled);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isEnabled) {
-      setPoints([]);
-      lastPointRef.current = null;
-      pendingPointRef.current = null;
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-      return undefined;
-    }
-
-    const flushPoint = () => {
-      frameRef.current = null;
-      const point = pendingPointRef.current;
-      pendingPointRef.current = null;
-      if (!point) return;
-
-      setPoints((current) => [point, ...current].slice(0, CURSOR_TRAIL_LIMIT));
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      if (event.pointerType && event.pointerType !== "mouse") return;
-
-      const lastPoint = lastPointRef.current;
-      const distance = lastPoint
-        ? Math.hypot(event.clientX - lastPoint.x, event.clientY - lastPoint.y)
-        : Number.POSITIVE_INFINITY;
-      if (distance < CURSOR_TRAIL_MIN_DISTANCE) return;
-
-      const point = {
-        id: nextIdRef.current,
-        x: event.clientX,
-        y: event.clientY
-      };
-      nextIdRef.current += 1;
-      lastPointRef.current = point;
-      pendingPointRef.current = point;
-
-      if (frameRef.current === null) {
-        frameRef.current = window.requestAnimationFrame(flushPoint);
-      }
-    };
-
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-    };
-  }, [isEnabled]);
-
-  if (!isEnabled || points.length === 0) return null;
-
-  return (
-    <div className="cursor-trail" aria-hidden="true">
-      {points.map((point, index) => (
-        <span
-          className="cursor-trail-pixel"
-          key={point.id}
-          style={
-            {
-              "--trail-index": index,
-              "--trail-size": `${Math.max(3, 9 - index)}px`,
-              "--trail-opacity": Math.max(0.16, 0.72 - index * 0.07),
-              "--trail-offset-x": `${-8 - index * 3}px`,
-              "--trail-offset-y": `${7 + index * 2}px`,
-              "--trail-shadow-offset-x": `${index * -1}px`,
-              "--trail-shadow-offset-y": `${index}px`,
-              left: point.x,
-              top: point.y
-            } as CSSProperties
-          }
-        />
-      ))}
     </div>
   );
 }
