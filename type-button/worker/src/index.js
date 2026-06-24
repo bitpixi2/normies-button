@@ -3,10 +3,18 @@ const ROUND_MS = ROUND_SECONDS * 1000;
 const HISTORY_LIMIT = 24;
 const HISTORY_STORAGE_KEY = "pressHistory";
 const PENDING_NUMBER_STORAGE_KEY = "pendingNumber";
+const TYPE_IMAGES_STORAGE_KEY = "typeImages";
 const MAX_SUBMITTED_NUMBER = 9999;
 const NUMBER_LOG_LIMIT = 250;
 const NORMIES_API_BASE = "https://api.normies.art";
 const TYPES = ["Human", "Cat", "Alien", "Agent", "Zombie"];
+const DEFAULT_TYPE_IMAGE_IDS = {
+  Human: 0,
+  Cat: 133,
+  Alien: 615,
+  Agent: 108,
+  Zombie: 1
+};
 const INITIAL_COUNTS = {
   Human: 0,
   Cat: 0,
@@ -182,10 +190,16 @@ export class ArenaObject {
     const now = Date.now();
     const value = parseSubmittedNumber(submittedNumber);
     const details = await lookupNormieDetails(value);
+    if (!details.normieType) {
+      throw new Error("That's not a valid Normies ID #, mate!");
+    }
+
+    const imageUrl = imageUrlForNormie(value);
     const pendingNumber = {
       value,
       owner: details.owner,
       normieType: details.normieType,
+      imageUrl,
       visitorTag: visitorTag(visitorId),
       timestamp: new Date(now).toISOString()
     };
@@ -200,6 +214,15 @@ export class ArenaObject {
       roundId: round.roundId
     });
     await this.state.storage.put(PENDING_NUMBER_STORAGE_KEY, pendingNumber);
+    await this.saveTypeImage(details.normieType, {
+      value,
+      owner: details.owner,
+      normieType: details.normieType,
+      imageUrl,
+      visitorTag: pendingNumber.visitorTag,
+      timestamp: pendingNumber.timestamp,
+      source: "submitted"
+    });
 
     if (changed) {
       await this.saveRound(round);
@@ -229,6 +252,7 @@ export class ArenaObject {
     );
     const pendingNumber = await this.getPendingNumber();
     const stats = this.readPressStats();
+    const typeImages = await this.getTypeImages();
 
     return {
       status: round.status,
@@ -244,6 +268,7 @@ export class ArenaObject {
       recentPresses: history,
       featuredNumber: normalizeNumberRecord(round.featuredNumber),
       pendingNumber,
+      typeImages,
       stats,
       visitorPressed: Boolean(visitorPress),
       visitorRun: visitorPress
@@ -305,6 +330,18 @@ export class ArenaObject {
     return normalizeNumberRecord(
       await this.state.storage.get(PENDING_NUMBER_STORAGE_KEY)
     );
+  }
+
+  async getTypeImages() {
+    return normalizeTypeImages(
+      await this.state.storage.get(TYPE_IMAGES_STORAGE_KEY)
+    );
+  }
+
+  async saveTypeImage(type, image) {
+    const images = await this.getTypeImages();
+    images[type] = normalizeTypeImage(image, type);
+    await this.state.storage.put(TYPE_IMAGES_STORAGE_KEY, images);
   }
 
   async consumePendingNumber() {
@@ -670,7 +707,7 @@ async function lookupNormieOwner(tokenId) {
 
 async function lookupNormieType(tokenId) {
   try {
-    const response = await fetch(`${NORMIES_API_BASE}/normie/${tokenId}`);
+    const response = await fetch(`${NORMIES_API_BASE}/normie/${tokenId}/metadata`);
     if (!response.ok) return null;
     const data = await response.json();
     const typeTrait = Array.isArray(data.attributes)
@@ -680,6 +717,10 @@ async function lookupNormieType(tokenId) {
   } catch {
     return null;
   }
+}
+
+function imageUrlForNormie(tokenId) {
+  return `${NORMIES_API_BASE}/normie/${tokenId}/image.svg`;
 }
 
 function normalizeNumberRecord(value) {
@@ -700,12 +741,54 @@ function normalizeNumberRecord(value) {
     normieType: TYPES.includes(candidate.normieType)
       ? candidate.normieType
       : null,
+    imageUrl:
+      typeof candidate.imageUrl === "string"
+        ? candidate.imageUrl
+        : imageUrlForNormie(candidate.value),
     visitorTag:
       typeof candidate.visitorTag === "string" ? candidate.visitorTag : "----",
     timestamp:
       typeof candidate.timestamp === "string"
         ? candidate.timestamp
         : new Date(0).toISOString()
+  };
+}
+
+function normalizeTypeImages(value) {
+  const stored = value && typeof value === "object" ? value : {};
+  return Object.fromEntries(
+    TYPES.map((type) => [type, normalizeTypeImage(stored[type], type)])
+  );
+}
+
+function normalizeTypeImage(value, type) {
+  const fallbackId = DEFAULT_TYPE_IMAGE_IDS[type];
+  const candidate = value && typeof value === "object" ? value : {};
+  const rawValue = Number(candidate.value);
+  const tokenValue =
+    Number.isInteger(rawValue) && rawValue >= 0 && rawValue <= MAX_SUBMITTED_NUMBER
+      ? rawValue
+      : fallbackId;
+  const normieType = TYPES.includes(candidate.normieType)
+    ? candidate.normieType
+    : type;
+
+  return {
+    type,
+    value: tokenValue,
+    owner: typeof candidate.owner === "string" ? candidate.owner : null,
+    normieType,
+    imageUrl:
+      typeof candidate.imageUrl === "string"
+        ? candidate.imageUrl
+        : imageUrlForNormie(tokenValue),
+    visitorTag:
+      typeof candidate.visitorTag === "string" ? candidate.visitorTag : "----",
+    timestamp:
+      typeof candidate.timestamp === "string"
+        ? candidate.timestamp
+        : new Date(0).toISOString(),
+    source: candidate.source === "submitted" ? "submitted" : "default"
   };
 }
 

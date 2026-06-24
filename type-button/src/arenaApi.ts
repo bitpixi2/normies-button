@@ -32,8 +32,20 @@ export type ArenaNumber = {
   value: number;
   owner: string | null;
   normieType: NormieType | null;
+  imageUrl: string;
   visitorTag: string;
   timestamp: string;
+};
+
+export type ArenaTypeImage = {
+  type: NormieType;
+  value: number;
+  owner: string | null;
+  normieType: NormieType;
+  imageUrl: string;
+  visitorTag: string;
+  timestamp: string;
+  source: "default" | "submitted";
 };
 
 export type ArenaStats = {
@@ -58,6 +70,7 @@ export type ArenaState = {
   recentPresses: ArenaPress[];
   featuredNumber: ArenaNumber | null;
   pendingNumber: ArenaNumber | null;
+  typeImages: Record<NormieType, ArenaTypeImage>;
   stats: ArenaStats;
   visitorPressed: boolean;
   visitorRun: RunRecord | null;
@@ -100,6 +113,7 @@ export function fallbackArenaState(visitorId: string): ArenaState {
     recentPresses: [],
     featuredNumber: null,
     pendingNumber: null,
+    typeImages: fallbackTypeImages(),
     stats: {
       totalPresses: 0,
       countryCount: 0,
@@ -117,6 +131,32 @@ export function fallbackArenaState(visitorId: string): ArenaState {
     visitorPressed: false,
     visitorRun: null
   };
+}
+
+export function fallbackTypeImages(): Record<NormieType, ArenaTypeImage> {
+  const defaults: Record<NormieType, number> = {
+    Human: 0,
+    Cat: 133,
+    Alien: 615,
+    Agent: 108,
+    Zombie: 1
+  };
+
+  return Object.fromEntries(
+    Object.entries(defaults).map(([type, value]) => [
+      type,
+      {
+        type: type as NormieType,
+        value,
+        owner: null,
+        normieType: type as NormieType,
+        imageUrl: `https://api.normies.art/normie/${value}/image.svg`,
+        visitorTag: "----",
+        timestamp: new Date(0).toISOString(),
+        source: "default"
+      }
+    ])
+  ) as Record<NormieType, ArenaTypeImage>;
 }
 
 export async function fetchArenaState(visitorId: string): Promise<ArenaState> {
@@ -151,10 +191,10 @@ export async function submitRoundNumber(
   }
 
   if ("state" in payload && payload.state) {
-    return payload.state;
+    return normalizeArenaState(payload.state);
   }
 
-  return payload as ArenaState;
+  return normalizeArenaState(payload as ArenaState);
 }
 
 async function requestArena(path: string, body?: unknown): Promise<ArenaState> {
@@ -165,11 +205,21 @@ async function requestArena(path: string, body?: unknown): Promise<ArenaState> {
   });
 
   const payload = (await response.json()) as ArenaState | { state: ArenaState };
-  const state = "state" in payload ? payload.state : payload;
+  const state = normalizeArenaState("state" in payload ? payload.state : payload);
 
   if (!response.ok) {
     return state;
   }
 
   return state;
+}
+
+function normalizeArenaState(state: ArenaState): ArenaState {
+  return {
+    ...state,
+    typeImages: {
+      ...fallbackTypeImages(),
+      ...(state.typeImages || {})
+    }
+  };
 }

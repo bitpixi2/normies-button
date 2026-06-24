@@ -40,7 +40,7 @@ export const TYPE_WINDOWS: TypeWindow[] = [
     color: "#111111",
     accent: "#d8d8d8",
     tone: "#f2f2f2",
-    representativeId: 8831
+    representativeId: 133
   },
   {
     type: "Alien",
@@ -49,7 +49,7 @@ export const TYPE_WINDOWS: TypeWindow[] = [
     color: "#111111",
     accent: "#cfcfcf",
     tone: "#eeeeee",
-    representativeId: 3295
+    representativeId: 615
   },
   {
     type: "Agent",
@@ -58,7 +58,7 @@ export const TYPE_WINDOWS: TypeWindow[] = [
     color: "#111111",
     accent: "#c2c2c2",
     tone: "#e9e9e9",
-    representativeId: 7626
+    representativeId: 108
   },
   {
     type: "Zombie",
@@ -67,7 +67,7 @@ export const TYPE_WINDOWS: TypeWindow[] = [
     color: "#111111",
     accent: "#b5b5b5",
     tone: "#e4e4e4",
-    representativeId: 9572
+    representativeId: 1
   }
 ];
 

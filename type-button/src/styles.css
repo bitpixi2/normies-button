@@ -382,6 +382,25 @@ h2 {
   filter: grayscale(1) contrast(1.2);
 }
 
+.normie-tile.is-type-swap-new img {
+  animation: type-image-swap-flash 1.1s steps(1, end);
+}
+
+@keyframes type-image-swap-flash {
+  0%,
+  34%,
+  68% {
+    filter: grayscale(1) contrast(1.2) invert(1);
+  }
+
+  17%,
+  51%,
+  85%,
+  100% {
+    filter: grayscale(1) contrast(1.2);
+  }
+}
+
 .stack-row strong {
   font-size: 1.12rem;
   font-weight: 500;

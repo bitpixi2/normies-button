@@ -14,13 +14,9 @@ import {
   ensureVisitorId,
   submitRoundNumber,
   type ArenaPress,
-  type ArenaState
+  type ArenaState,
+  type ArenaTypeImage
 } from "./arenaApi";
-import {
-  fallbackProfiles,
-  fetchTypeProfiles,
-  type TypeProfile
-} from "./normiesApi";
 import {
   PixelArrow
 } from "./pixelSprites";
@@ -29,6 +25,7 @@ const POLL_MS = 1000;
 const HISTORY_VISIBLE_LIMIT = 5;
 const MOBILE_HISTORY_VISIBLE_LIMIT = 3;
 const HISTORY_FLASH_MS = 900;
+const TYPE_IMAGE_FLASH_MS = 1100;
 const BUTTON_TAP_FEEDBACK_MS = 180;
 const HAPTIC_STRONG_PATTERN = [35, 24, 35];
 const HAPTIC_SOFT_TAP_MS = 6;
@@ -44,7 +41,6 @@ const IDLE_PAUSE_MS = Number.isFinite(configuredIdlePauseMs)
 
 export function App() {
   const visitorId = useMemo(() => ensureVisitorId(), []);
-  const [profiles, setProfiles] = useState<TypeProfile[]>(fallbackProfiles);
   const [arena, setArena] = useState<ArenaState>(() =>
     fallbackArenaState(visitorId)
   );
@@ -54,10 +50,13 @@ export function App() {
   const [numberError, setNumberError] = useState("");
   const [isNumberBusy, setIsNumberBusy] = useState(false);
   const [flashedPressKey, setFlashedPressKey] = useState<string | null>(null);
+  const [flashedType, setFlashedType] = useState<string | null>(null);
   const [isButtonTapping, setIsButtonTapping] = useState(false);
   const [isIdlePaused, setIsIdlePaused] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModal>(null);
   const flashTimeoutRef = useRef<number | null>(null);
+  const typeFlashTimeoutRef = useRef<number | null>(null);
+  const typeImageKeysRef = useRef<Record<string, string> | null>(null);
   const tapTimeoutRef = useRef<number | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
 
@@ -77,26 +76,6 @@ export function App() {
       setIsIdlePaused(true);
       idleTimeoutRef.current = null;
     }, IDLE_PAUSE_MS);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchTypeProfiles()
-      .then((nextProfiles) => {
-        if (!cancelled) {
-          setProfiles(nextProfiles);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setProfiles(fallbackProfiles());
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -148,6 +127,31 @@ export function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [infoModal]);
 
+  useEffect(() => {
+    const nextKeys = typeImageKeys(arena.typeImages);
+    const previousKeys = typeImageKeysRef.current;
+    typeImageKeysRef.current = nextKeys;
+
+    if (!previousKeys) return undefined;
+
+    const changedType = TYPE_WINDOWS.find(
+      ({ type }) => previousKeys[type] && previousKeys[type] !== nextKeys[type]
+    )?.type;
+    if (!changedType) return undefined;
+
+    if (typeFlashTimeoutRef.current !== null) {
+      window.clearTimeout(typeFlashTimeoutRef.current);
+    }
+
+    setFlashedType(changedType);
+    typeFlashTimeoutRef.current = window.setTimeout(() => {
+      setFlashedType(null);
+      typeFlashTimeoutRef.current = null;
+    }, TYPE_IMAGE_FLASH_MS);
+
+    return undefined;
+  }, [arena.typeImages]);
+
   const adjustedNow = nowMs + (arena.serverNow - Date.now());
   const displayedRemaining =
     arena.status === "active" && arena.expiresAt
@@ -195,6 +199,7 @@ export function App() {
         recentPresses,
         featuredNumber: arena.featuredNumber,
         pendingNumber: arena.pendingNumber,
+        typeImages: arena.typeImages,
         stats: arena.stats
       });
 
@@ -210,6 +215,9 @@ export function App() {
     return () => {
       if (flashTimeoutRef.current !== null) {
         window.clearTimeout(flashTimeoutRef.current);
+      }
+      if (typeFlashTimeoutRef.current !== null) {
+        window.clearTimeout(typeFlashTimeoutRef.current);
       }
       if (tapTimeoutRef.current !== null) {
         window.clearTimeout(tapTimeoutRef.current);
@@ -334,9 +342,7 @@ export function App() {
           <div className="button-console">
             <div className="stack-wrap" aria-label="Type stack">
               {TYPE_WINDOWS.map((window) => {
-                const profile = profiles.find(
-                  (entry) => entry.type === window.type
-                );
+                const typeImage = arena.typeImages[window.type];
                 const isActive = activeType === window.type;
                 return (
                   <div
@@ -348,10 +354,14 @@ export function App() {
                         <PixelArrow />
                       </span>
                     )}
-                    <div className="normie-tile">
+                    <div
+                      className={`normie-tile ${
+                        flashedType === window.type ? "is-type-swap-new" : ""
+                      }`}
+                    >
                       <img
-                        src={profile?.imageUrl}
-                        alt={`Normie ${profile?.representativeId ?? ""}`}
+                        src={typeImage.imageUrl}
+                        alt={`${window.type} Normie ${formatNormieNumber(typeImage.value)}`}
                         width="48"
                         height="48"
                       />
@@ -636,8 +646,9 @@ function PrivacyCopy() {
       </p>
       <p>
         When you send in a Normie ID, the backend stores that ID, the resolved
-        owner wallet and Type from the Normies API, the round, timestamp, and
-        visitor tag. The app does not ask for your name, email, or wallet.
+        owner wallet, Type, image URL from the Normies API, the round,
+        timestamp, and visitor tag. The app does not ask for your name, email,
+        or wallet.
       </p>
     </div>
   );
@@ -670,8 +681,19 @@ function triggerHaptic(pattern: number | number[]) {
   navigator.vibrate(pattern);
 }
 
-function formatSubmittedNumber(value: number): string {
-  return value.toString().padStart(4, "0");
+function formatNormieNumber(value: number): string {
+  return `#${value}`;
+}
+
+function typeImageKeys(
+  images: Record<string, ArenaTypeImage>
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(images).map(([type, image]) => [
+      type,
+      `${image.value}:${image.timestamp}:${image.imageUrl}`
+    ])
+  );
 }
 
 function GlobalStats({ stats: rawStats }: { stats: ArenaState["stats"] }) {
