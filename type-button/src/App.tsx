@@ -380,7 +380,15 @@ export function App() {
             {arena.status === "idle" && <span>Start the shared timer</span>}
             {arena.status === "expired" && <span>Next round is starting</span>}
             {arena.status === "active" && !arena.visitorPressed && activeType && (
-              <span>{activeType} window active. One press this round</span>
+              <span>
+                <span className="result-sentence">
+                  {activeType} window active.
+                </span>
+                {" "}
+                <span className="result-sentence">
+                  One press this round.
+                </span>
+              </span>
             )}
             {arena.status === "active" && arena.visitorPressed && ownType && (
               <span>

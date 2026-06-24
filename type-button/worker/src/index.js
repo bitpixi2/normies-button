@@ -74,6 +74,11 @@ export class ArenaObject {
         return json(await this.readNumberLog(url.searchParams));
       }
 
+      if (url.pathname === "/admin/reset" && request.method === "POST") {
+        this.assertResetAccess(request);
+        return json(await this.resetBackend());
+      }
+
       return json({ error: "Not found" }, 404);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -95,7 +100,10 @@ export class ArenaObject {
       return this.stateForVisitor(normalized, visitorId, now);
     }
 
-    const nextRound = await this.createActiveRound(normalized.roundId + 1, now);
+    const nextRound = await this.createActiveRound(
+      startingRoundId(normalized),
+      now
+    );
     await this.saveRound(nextRound);
     return this.stateForVisitor(nextRound, visitorId, now);
   }
@@ -373,6 +381,29 @@ export class ArenaObject {
       throw new HttpError("Forbidden", 403);
     }
   }
+
+  async resetBackend() {
+    await this.state.storage.deleteAll();
+    this.state.storage.sql.exec("DROP TABLE IF EXISTS submitted_number_log");
+    const round = defaultRound();
+    await this.saveRound(round);
+    return this.stateForVisitor(round, "", Date.now(), []);
+  }
+
+  assertResetAccess(request) {
+    const expected = this.env?.RESET_KEY;
+    if (!expected) {
+      throw new HttpError("Reset access is not configured", 503);
+    }
+
+    const url = new URL(request.url);
+    const supplied =
+      request.headers.get("x-reset-key") || url.searchParams.get("key") || "";
+
+    if (supplied !== expected) {
+      throw new HttpError("Forbidden", 403);
+    }
+  }
 }
 
 class HttpError extends Error {
@@ -404,6 +435,18 @@ function createActiveRound(roundId, now, featuredNumber = null) {
     lastPress: null,
     featuredNumber: normalizeNumberRecord(featuredNumber)
   };
+}
+
+function startingRoundId(round) {
+  if (
+    round.status === "idle" &&
+    round.roundId === 0 &&
+    round.totalPresses === 0
+  ) {
+    return 0;
+  }
+
+  return round.roundId + 1;
 }
 
 function normalizeRoundShape(round) {
