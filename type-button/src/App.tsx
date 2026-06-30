@@ -1003,10 +1003,10 @@ export function formatGlobalLeadCopy(stats: ArenaState["stats"]): string {
     .map((entry) => entry.type);
 
   if (tiedTypes.length > 1) {
-    return `${formatTypeList(tiedTypes)} are tied at ${topCount} ${pluralizePress(topCount)}`;
+    return `${formatTypeList(tiedTypes)} are tied at ${topCount} total ${pluralizePress(topCount)}`;
   }
 
-  return `${pluralizeType(tiedTypes[0])} leading by ${stats.leadMargin} ${pluralizePress(stats.leadMargin)}`;
+  return `${pluralizeType(tiedTypes[0])} leading by ${stats.leadMargin} total ${pluralizePress(stats.leadMargin)}`;
 }
 
 export function formatUltimateWinnerCopy(finale: ArenaFinale | null): string {
@@ -1046,7 +1046,7 @@ function renderGlobalLeadCopy(
         <span>
           {formatTypeList(tiedTypes)} are tied at{" "}
           <span className="number-text">{topCount}</span>{" "}
-          {pluralizePress(topCount)}
+          total {pluralizePress(topCount)}
         </span>
       </>
     );
@@ -1058,7 +1058,7 @@ function renderGlobalLeadCopy(
       <span>
         {pluralizeType(tiedTypes[0])} leading by{" "}
         <span className="number-text">{stats.leadMargin}</span>{" "}
-        {pluralizePress(stats.leadMargin)}
+        total {pluralizePress(stats.leadMargin)}
       </span>
     </>
   );

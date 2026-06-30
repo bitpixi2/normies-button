@@ -8,8 +8,9 @@ const TYPE_IMAGES_STORAGE_KEY = "typeImages";
 const TYPE_IMAGE_SVG_STORAGE_PREFIX = "typeImageSvg:";
 const MAX_SUBMITTED_NUMBER = 9999;
 const NUMBER_LOG_LIMIT = 250;
-const PRESS_THROTTLE_MS = 15 * 1000;
+const PRESS_THROTTLE_MS = 1000;
 const REPEATED_TIMING_LIMIT = 3;
+const REPEATED_TIMING_WINDOW_MS = 10 * 60 * 1000;
 const NORMIES_API_BASE = "https://api.normies.art";
 const PUBLIC_API_BASE = "https://normies-type-button-api.deviantclaw.workers.dev";
 const TYPES = ["Human", "Cat", "Alien", "Agent", "Zombie"];
@@ -160,7 +161,7 @@ export class ArenaObject {
     }
     const timingKeys = pressTimingKeys(visitorId, location.ipAddress);
     const timingBucket = pressTimingBucket(round.expiresAt, now);
-    if (await this.isRepeatedTimingBlocked(timingKeys, timingBucket)) {
+    if (await this.isRepeatedTimingBlocked(timingKeys, timingBucket, now)) {
       return this.stateForVisitor(round, visitorId, now);
     }
 
@@ -204,7 +205,7 @@ export class ArenaObject {
       ...location
     });
     await this.markPressThrottle(throttleKeys, now);
-    await this.markPressTiming(timingKeys, timingBucket);
+    await this.markPressTiming(timingKeys, timingBucket, now);
     const recentPresses = await this.addHistoryPress(press);
     const nextRound = await this.createRoundAfterEnd(pressedRound, now);
     await this.saveRound(nextRound);
@@ -228,14 +229,16 @@ export class ArenaObject {
     await Promise.all(keys.map((key) => this.state.storage.put(key, now)));
   }
 
-  async isRepeatedTimingBlocked(keys, timingBucket) {
+  async isRepeatedTimingBlocked(keys, timingBucket, now) {
     for (const key of keys) {
       const value = await this.state.storage.get(key);
       if (
         value &&
         typeof value === "object" &&
         value.bucket === timingBucket &&
-        value.count >= REPEATED_TIMING_LIMIT
+        value.count >= REPEATED_TIMING_LIMIT &&
+        typeof value.updatedAt === "number" &&
+        now - value.updatedAt < REPEATED_TIMING_WINDOW_MS
       ) {
         return true;
       }
@@ -243,17 +246,22 @@ export class ArenaObject {
     return false;
   }
 
-  async markPressTiming(keys, timingBucket) {
+  async markPressTiming(keys, timingBucket, now) {
     await Promise.all(
       keys.map(async (key) => {
         const value = await this.state.storage.get(key);
         const count =
-          value && typeof value === "object" && value.bucket === timingBucket
+          value &&
+          typeof value === "object" &&
+          value.bucket === timingBucket &&
+          typeof value.updatedAt === "number" &&
+          now - value.updatedAt < REPEATED_TIMING_WINDOW_MS
             ? Number(value.count) + 1
             : 1;
         await this.state.storage.put(key, {
           bucket: timingBucket,
-          count
+          count,
+          updatedAt: now
         });
       })
     );
@@ -1023,12 +1031,8 @@ function pressStorageKey(roundId, visitorId) {
   return `press:${roundId}:${visitorId}`;
 }
 
-function pressThrottleKeys(visitorId, ipAddress) {
-  const keys = [`pressThrottle:visitor:${visitorId}`];
-  if (ipAddress) {
-    keys.push(`pressThrottle:ip:${ipAddress}`);
-  }
-  return keys;
+function pressThrottleKeys(visitorId) {
+  return [`pressThrottle:visitor:${visitorId}`];
 }
 
 function pressTimingKeys(visitorId, ipAddress) {

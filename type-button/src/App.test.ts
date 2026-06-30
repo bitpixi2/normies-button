@@ -39,7 +39,7 @@ describe("Global leaderboard copy", () => {
         leadingCount: 5,
         leadMargin: 2
       })
-    ).toBe("Humans leading by 2 presses");
+    ).toBe("Humans leading by 2 total presses");
   });
 
   it("reports tied leaders instead of a zero-margin lead", () => {
@@ -58,7 +58,7 @@ describe("Global leaderboard copy", () => {
         leadingCount: 6,
         leadMargin: 0
       })
-    ).toBe("Humans and Cats are tied at 6 presses");
+    ).toBe("Humans and Cats are tied at 6 total presses");
   });
 
   it("reports no leader before any global presses", () => {
