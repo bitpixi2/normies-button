@@ -48,6 +48,7 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Wrapped remaining visible numeric values such as Round and lead-margin numbers in the number font, removed the arena status/result bar on desktop and mobile, reduced Live History to latest 3 rows on all viewports, and kept the lead sentence on one white line.
 - Added a Live History "More" link that opens the public backend `/state` JSON in a new tab so the tracked recentPresses history can be inspected beyond the visible 3 rows.
 - Removed stale reference/screenshot PNGs from the tracked repo, moved desktop modules lower with the footer closer to the viewport bottom, clarified Privacy copy for submitted Normie ID owner lookup, and added a footer link to Normie #2613.
+- Added footer Type glyph separators, a "Follow me on X" footer link, a README inspiration note for Reddit's The Button, slightly larger numeric text across Type rows, stats, history headers, and history timings, and changed the history JSON link label to "View all data". Human now replaces the hyphen inside the credit, with Cat/Alien/Agent/Zombie as the following footer interpuncts. Type row count labels now spell out total presses, the desktop lower-module offset now overrides the base layout margin, the desktop button column is nudged right, and the footer repo link says "Github Repo".
 
 ## TODO
 - Configure the `NUMBER_LOG_KEY` Worker secret before using the private `/number-log` endpoint.

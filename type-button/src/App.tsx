@@ -337,7 +337,8 @@ export function App() {
               />
             </h1>
             <p className="brand-instruction">
-              Wait for your favorite Type, then press the button.
+              Wait for your favorite type,
+              <br className="brand-instruction-break" /> then press the button.
             </p>
             <div className="header-clock" aria-live="polite">
               {formatClock(displayedRemaining)}
@@ -362,6 +363,7 @@ export function App() {
               {TYPE_WINDOWS.map((window) => {
                 const typeImage = arena.typeImages[window.type];
                 const isActive = activeType === window.type;
+                const typePressCount = arena.pressCounts[window.type] ?? 0;
                 return (
                   <div
                     className={`stack-row ${isActive ? "is-active" : ""}`}
@@ -389,7 +391,14 @@ export function App() {
                       {formatClock(window.maxRemaining)}-
                       {formatClock(window.minRemaining)}
                     </span>
-                    <em>{arena.pressCounts[window.type]}</em>
+                    <em className="stack-count">
+                      <span className="number-text">
+                        {typePressCount.toLocaleString()}
+                      </span>{" "}
+                      <span className="stack-count-label">
+                        total {pluralizePress(typePressCount)}
+                      </span>
+                    </em>
                   </div>
                 );
               })}
@@ -437,6 +446,7 @@ export function App() {
               <div className="number-entry">
                 <input
                   id="round-number"
+                  autoComplete="off"
                   aria-describedby={numberError ? "round-number-error" : undefined}
                   aria-invalid={numberError ? "true" : "false"}
                   inputMode="text"
@@ -483,7 +493,7 @@ export function App() {
                 rel="noreferrer"
                 target="_blank"
               >
-                More
+                View all data
               </a>
             </span>
           </div>
@@ -524,7 +534,7 @@ export function App() {
 
       </main>
       <footer className="site-footer" aria-label="Site links">
-        <span>
+        <span className="footer-section">
           Made by{" "}
           <a
             href="https://bitpixi.com"
@@ -534,7 +544,7 @@ export function App() {
           >
             bitpixi
           </a>
-          {" - "}
+          <FooterTypeGlyph type="Human" />
           Normie{" "}
           <a
             href="https://opensea.io/item/ethereum/0x9eb6e2025b64f340691e424b7fe7022ffde12438/2613"
@@ -545,7 +555,9 @@ export function App() {
             #2613
           </a>
         </span>
+        <FooterTypeGlyph type="Cat" />
         <button
+          className="footer-section"
           type="button"
           onClick={() => {
             triggerSoftHaptic();
@@ -554,7 +566,9 @@ export function App() {
         >
           Terms
         </button>
+        <FooterTypeGlyph type="Alien" />
         <button
+          className="footer-section"
           type="button"
           onClick={() => {
             triggerSoftHaptic();
@@ -563,13 +577,25 @@ export function App() {
         >
           Privacy
         </button>
+        <FooterTypeGlyph type="Agent" />
         <a
+          className="footer-section"
           href="https://github.com/bitpixi2/normies-button"
           onPointerDown={triggerSoftHaptic}
           rel="noreferrer"
           target="_blank"
         >
-          GitHub
+          Github Repo
+        </a>
+        <FooterTypeGlyph type="Zombie" />
+        <a
+          className="footer-section"
+          href="https://x.com/bitpixi"
+          onPointerDown={triggerSoftHaptic}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Follow me on X
         </a>
       </footer>
       {infoModal && (
@@ -589,6 +615,19 @@ export function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function FooterTypeGlyph({ type }: { type: string }) {
+  return (
+    <img
+      alt=""
+      aria-hidden="true"
+      className="footer-type-glyph"
+      height="18"
+      src={typeGlyphSrc(type)}
+      width="18"
+    />
   );
 }
 

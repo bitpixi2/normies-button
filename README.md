@@ -15,6 +15,8 @@
 
 Normies Button turns the collection's `Type` trait into a live timing ritual. Everyone sees the same global round. Wait for your favorite Type, then press the button.
 
+Inspired by Reddit's [The Button](https://en.wikipedia.org/wiki/The_Button_(Reddit)): a shared countdown where waiting changed what you became. Normies Button remixes that pressure with Normies Type windows.
+
 ```txt
           1:00 -> Human  \
           0:48 -> Cat     > the brave wait
