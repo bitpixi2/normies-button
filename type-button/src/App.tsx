@@ -42,7 +42,7 @@ const HAPTIC_STRONG_PATTERN = [35, 24, 35];
 const HAPTIC_SOFT_TAP_MS = 6;
 const AUDIO_STORAGE_KEY = "normies-button:audio-enabled";
 const SOUND_EFFECT_MASTER_GAIN = 0.2;
-const BACKGROUND_MUSIC_GAIN_RATIO = 0.1;
+const BACKGROUND_MUSIC_GAIN_RATIO = 0.08;
 const BACKGROUND_MUSIC_STEP_MS = 240;
 type InfoModal = "terms" | "privacy" | null;
 
@@ -340,6 +340,24 @@ export function App() {
     void syncArenaState();
   };
 
+  const triggerLinkFeedback = () => {
+    triggerSoftHaptic();
+    startBackgroundMusic(
+      isAudioEnabled,
+      audioContextRef,
+      musicTimerRef,
+      musicGainRef,
+      musicStepRef
+    );
+    playLinkWooshSound(isAudioEnabled, audioContextRef, "up");
+  };
+
+  const handleInfoClose = () => {
+    triggerSoftHaptic();
+    playLinkWooshSound(isAudioEnabled, audioContextRef, "down");
+    setInfoModal(null);
+  };
+
   const triggerButtonFeedback = () => {
     triggerHaptic(HAPTIC_STRONG_PATTERN);
     startBackgroundMusic(
@@ -609,6 +627,7 @@ export function App() {
               <a
                 className="history-more"
                 href={`${ARENA_API_BASE}/state`}
+                onPointerDown={triggerLinkFeedback}
                 rel="noreferrer"
                 target="_blank"
               >
@@ -657,7 +676,7 @@ export function App() {
           Made by{" "}
           <a
             href="https://bitpixi.com"
-            onPointerDown={triggerSoftHaptic}
+            onPointerDown={triggerLinkFeedback}
             rel="noreferrer"
             target="_blank"
           >
@@ -667,7 +686,7 @@ export function App() {
           Normie{" "}
           <a
             href="https://opensea.io/item/ethereum/0x9eb6e2025b64f340691e424b7fe7022ffde12438/2613"
-            onPointerDown={triggerSoftHaptic}
+            onPointerDown={triggerLinkFeedback}
             rel="noreferrer"
             target="_blank"
           >
@@ -679,7 +698,7 @@ export function App() {
           className="footer-section"
           type="button"
           onClick={() => {
-            triggerSoftHaptic();
+            triggerLinkFeedback();
             setInfoModal("terms");
           }}
         >
@@ -690,7 +709,7 @@ export function App() {
           className="footer-section"
           type="button"
           onClick={() => {
-            triggerSoftHaptic();
+            triggerLinkFeedback();
             setInfoModal("privacy");
           }}
         >
@@ -700,7 +719,7 @@ export function App() {
         <a
           className="footer-section"
           href="https://github.com/bitpixi2/normies-button"
-          onPointerDown={triggerSoftHaptic}
+          onPointerDown={triggerLinkFeedback}
           rel="noreferrer"
           target="_blank"
         >
@@ -710,16 +729,14 @@ export function App() {
         <a
           className="footer-section"
           href="https://x.com/bitpixi"
-          onPointerDown={triggerSoftHaptic}
+          onPointerDown={triggerLinkFeedback}
           rel="noreferrer"
           target="_blank"
         >
           Follow me on X
         </a>
       </footer>
-      {infoModal && (
-        <InfoDialog kind={infoModal} onClose={() => setInfoModal(null)} />
-      )}
+      {infoModal && <InfoDialog kind={infoModal} onClose={handleInfoClose} />}
       {isIdlePaused && (
         <div className="idle-overlay" role="dialog" aria-modal="true">
           <div className="idle-module">
@@ -817,10 +834,7 @@ function InfoDialog({
           </h2>
           <button
             type="button"
-            onClick={() => {
-              triggerSoftHaptic();
-              onClose();
-            }}
+            onClick={onClose}
             aria-label="Close"
           >
             Close
@@ -991,6 +1005,73 @@ function playNormieSubmitSound(
   });
 }
 
+function playLinkWooshSound(
+  isEnabled: boolean,
+  audioContextRef: MutableRefObject<AudioContext | null>,
+  direction: "up" | "down"
+) {
+  const context = getAudioContext(isEnabled, audioContextRef);
+  if (!context) return;
+
+  const startedAt = context.currentTime;
+  const duration = 0.24;
+  const isUp = direction === "up";
+  const masterGain = context.createGain();
+  masterGain.gain.setValueAtTime(0.001, startedAt);
+  masterGain.gain.exponentialRampToValueAtTime(
+    SOUND_EFFECT_MASTER_GAIN,
+    startedAt + 0.025
+  );
+  masterGain.gain.exponentialRampToValueAtTime(0.001, startedAt + duration);
+  masterGain.connect(context.destination);
+
+  const sweepOscillator = context.createOscillator();
+  const sweepGain = context.createGain();
+  sweepOscillator.type = "triangle";
+  sweepOscillator.frequency.setValueAtTime(isUp ? 260 : 980, startedAt);
+  sweepOscillator.frequency.exponentialRampToValueAtTime(
+    isUp ? 1180 : 180,
+    startedAt + duration
+  );
+  sweepGain.gain.setValueAtTime(0.001, startedAt);
+  sweepGain.gain.exponentialRampToValueAtTime(0.1, startedAt + 0.03);
+  sweepGain.gain.exponentialRampToValueAtTime(0.001, startedAt + duration);
+  sweepOscillator.connect(sweepGain).connect(masterGain);
+  sweepOscillator.start(startedAt);
+  sweepOscillator.stop(startedAt + duration);
+
+  const noiseBufferLength = Math.floor(context.sampleRate * duration);
+  const noiseBuffer = context.createBuffer(
+    1,
+    noiseBufferLength,
+    context.sampleRate
+  );
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let index = 0; index < noiseBufferLength; index += 1) {
+    const fade = 1 - index / noiseBufferLength;
+    noiseData[index] = (Math.random() * 2 - 1) * fade;
+  }
+
+  const noiseSource = context.createBufferSource();
+  const filter = context.createBiquadFilter();
+  const noiseGain = context.createGain();
+  noiseSource.buffer = noiseBuffer;
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(isUp ? 680 : 1900, startedAt);
+  filter.frequency.exponentialRampToValueAtTime(
+    isUp ? 3200 : 420,
+    startedAt + duration
+  );
+  filter.Q.setValueAtTime(0.85, startedAt);
+  noiseGain.gain.setValueAtTime(0.001, startedAt);
+  noiseGain.gain.exponentialRampToValueAtTime(0.16, startedAt + 0.018);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, startedAt + duration);
+
+  noiseSource.connect(filter).connect(noiseGain).connect(masterGain);
+  noiseSource.start(startedAt);
+  noiseSource.stop(startedAt + duration);
+}
+
 function startBackgroundMusic(
   isEnabled: boolean,
   audioContextRef: MutableRefObject<AudioContext | null>,
@@ -1080,8 +1161,8 @@ function playBackgroundMusicStep(
     destination,
     frequency,
     startedAt,
-    phraseStep % 4 === 0 ? "square" : "triangle",
-    0.15,
+    phraseStep % 4 === 0 ? "triangle" : "sine",
+    0.11,
     BACKGROUND_MUSIC_STEP_MS / 1000 - 0.02
   );
 
@@ -1091,8 +1172,8 @@ function playBackgroundMusicStep(
       destination,
       bass[Math.floor(phraseStep / 4) % bass.length],
       startedAt,
-      "square",
-      0.08,
+      "triangle",
+      0.065,
       BACKGROUND_MUSIC_STEP_MS / 1000 * 2
     );
   }
@@ -1103,21 +1184,9 @@ function playBackgroundMusicStep(
       destination,
       harmony[Math.floor(phraseStep / 4) % harmony.length],
       startedAt,
-      "triangle",
-      0.055,
-      BACKGROUND_MUSIC_STEP_MS / 1000
-    );
-  }
-
-  if (phraseStep >= 40 && phraseStep < 56 && phraseStep % 8 === 6) {
-    playMusicNote(
-      context,
-      destination,
-      frequency * 2,
-      startedAt,
-      "square",
-      0.04,
-      BACKGROUND_MUSIC_STEP_MS / 1000 * 0.65
+      "sine",
+      0.03,
+      BACKGROUND_MUSIC_STEP_MS / 1000 * 0.8
     );
   }
 }
@@ -1138,10 +1207,10 @@ function playMusicNote(
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(frequency, startedAt);
   gain.gain.setValueAtTime(0.001, startedAt);
-  gain.gain.exponentialRampToValueAtTime(peakGain, startedAt + 0.018);
+  gain.gain.exponentialRampToValueAtTime(peakGain, startedAt + 0.03);
   gain.gain.exponentialRampToValueAtTime(
     0.001,
-    Math.max(startedAt + 0.04, stopAt - 0.03)
+    Math.max(startedAt + 0.08, stopAt - 0.05)
   );
 
   oscillator.connect(gain).connect(destination);

@@ -59,6 +59,8 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Added gentle generated chiptune background music behind the game. It starts after the first user interaction or when audio is toggled on, uses the same audio toggle as effects, and runs at 36% of the sound-effect master gain.
 - Replaced the README hero screenshot with the latest desktop capture provided by the user.
 - Changed new visitors to start with audio off, reduced background chiptune to 10% of sound-effect gain, and expanded the loop so bass/harmony layers enter for later bars then drop back out.
+- Softened the background chiptune further: 8% of sound-effect gain, smoother triangle/sine voices, lower harmony peaks, and no sharp octave duplicate layer.
+- Added generated link transition sound effects: link-like actions play an upward whoosh at sound-effect volume, while modal Close/overlay dismiss plays a downward whoosh.
 
 ## TODO
 - Configure the `NUMBER_LOG_KEY` Worker secret before using the private `/number-log` endpoint.
