@@ -58,6 +58,7 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Updated Terms to describe immediate shared rounds and current abuse safeguards. Finale winner rows now keep the arrow/selected state, and the desktop Ultimate Winner panel stretches to match the full Type stack height with wider side gutters.
 - Added gentle generated chiptune background music behind the game. It starts after the first user interaction or when audio is toggled on, uses the same audio toggle as effects, and runs at 36% of the sound-effect master gain.
 - Replaced the README hero screenshot with the latest desktop capture provided by the user.
+- Changed new visitors to start with audio off, reduced background chiptune to 10% of sound-effect gain, and expanded the loop so bass/harmony layers enter for later bars then drop back out.
 
 ## TODO
 - Configure the `NUMBER_LOG_KEY` Worker secret before using the private `/number-log` endpoint.

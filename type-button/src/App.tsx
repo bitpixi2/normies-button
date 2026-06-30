@@ -42,7 +42,7 @@ const HAPTIC_STRONG_PATTERN = [35, 24, 35];
 const HAPTIC_SOFT_TAP_MS = 6;
 const AUDIO_STORAGE_KEY = "normies-button:audio-enabled";
 const SOUND_EFFECT_MASTER_GAIN = 0.2;
-const BACKGROUND_MUSIC_GAIN_RATIO = 0.36;
+const BACKGROUND_MUSIC_GAIN_RATIO = 0.1;
 const BACKGROUND_MUSIC_STEP_MS = 240;
 type InfoModal = "terms" | "privacy" | null;
 
@@ -891,8 +891,8 @@ function buttonLabel(arena: ArenaState): string {
 }
 
 function readAudioPreference() {
-  if (typeof window === "undefined") return true;
-  return window.localStorage.getItem(AUDIO_STORAGE_KEY) !== "off";
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(AUDIO_STORAGE_KEY) === "on";
 }
 
 function writeAudioPreference(isEnabled: boolean) {
@@ -1068,23 +1068,85 @@ function playBackgroundMusicStep(
     392,
     329.63
   ];
-  const frequency = melody[step % melody.length];
+  const bass = [130.81, 130.81, 146.83, 146.83, 174.61, 164.81, 146.83, 130.81];
+  const harmony = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 880, 698.46];
+  const phraseStep = step % 64;
+  const melodyStep = step % melody.length;
+  const frequency = melody[melodyStep];
   const startedAt = context.currentTime + 0.012;
+
+  playMusicNote(
+    context,
+    destination,
+    frequency,
+    startedAt,
+    phraseStep % 4 === 0 ? "square" : "triangle",
+    0.15,
+    BACKGROUND_MUSIC_STEP_MS / 1000 - 0.02
+  );
+
+  if (phraseStep >= 16 && phraseStep < 48 && phraseStep % 4 === 0) {
+    playMusicNote(
+      context,
+      destination,
+      bass[Math.floor(phraseStep / 4) % bass.length],
+      startedAt,
+      "square",
+      0.08,
+      BACKGROUND_MUSIC_STEP_MS / 1000 * 2
+    );
+  }
+
+  if (phraseStep >= 32 && phraseStep < 56 && phraseStep % 4 === 2) {
+    playMusicNote(
+      context,
+      destination,
+      harmony[Math.floor(phraseStep / 4) % harmony.length],
+      startedAt,
+      "triangle",
+      0.055,
+      BACKGROUND_MUSIC_STEP_MS / 1000
+    );
+  }
+
+  if (phraseStep >= 40 && phraseStep < 56 && phraseStep % 8 === 6) {
+    playMusicNote(
+      context,
+      destination,
+      frequency * 2,
+      startedAt,
+      "square",
+      0.04,
+      BACKGROUND_MUSIC_STEP_MS / 1000 * 0.65
+    );
+  }
+}
+
+function playMusicNote(
+  context: AudioContext,
+  destination: GainNode,
+  frequency: number,
+  startedAt: number,
+  type: OscillatorType,
+  peakGain: number,
+  duration: number
+) {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
+  const stopAt = startedAt + duration;
 
-  oscillator.type = step % 4 === 0 ? "square" : "triangle";
+  oscillator.type = type;
   oscillator.frequency.setValueAtTime(frequency, startedAt);
   gain.gain.setValueAtTime(0.001, startedAt);
-  gain.gain.exponentialRampToValueAtTime(0.16, startedAt + 0.018);
+  gain.gain.exponentialRampToValueAtTime(peakGain, startedAt + 0.018);
   gain.gain.exponentialRampToValueAtTime(
     0.001,
-    startedAt + BACKGROUND_MUSIC_STEP_MS / 1000 - 0.03
+    Math.max(startedAt + 0.04, stopAt - 0.03)
   );
 
   oscillator.connect(gain).connect(destination);
   oscillator.start(startedAt);
-  oscillator.stop(startedAt + BACKGROUND_MUSIC_STEP_MS / 1000 - 0.02);
+  oscillator.stop(stopAt);
 }
 
 function getAudioContext(
