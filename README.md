@@ -27,61 +27,44 @@ Inspired by Reddit's [The Button](https://en.wikipedia.org/wiki/The_Button_(Redd
 
 ## What It Is
 
-```txt
-+-[ THE BUTTON ROOM ]----------------------------------------+
-|  * shared 60-second global round                          |
-|  * one press per visitor per round                        |
-|  * instant multiplayer state from a Cloudflare Durable Obj |
-|  * Normies API images and Type data wired into gameplay   |
-|  * submitted Normie numbers can replace matching Type art |
-+------------------------------------------------------------+
-```
+Normies Button is a live multiplayer timing game built from the Normies `Type` trait. Everyone shares the same 60-second round, and the Type you receive depends on when you press.
 
-The hackathon idea is simple: make Normies data playable. This is not a gallery wearing a game costume; the trait itself is the clock.
+It is inspired by Reddit's The Button, where communities formed around the flair color earned by pressing at different times. This version maps that same social pressure onto Normies Types instead of colors: Human, Cat, Alien, Agent, and Zombie.
 
-## Judge Bait
+## For the Judges
 
 ```txt
 > visible API usage
 > fast walletless entry
-> real shared backend
+> live multiplayer backend
+> mobile responsive gameplay
 > readable rules in the first screen
+> safeguards for rapid or scripted presses
 > monochrome pixel UI with custom sprites
 > Zombie pressure in the final window
 ```
 
 - **Live Normies data:** pulls collection imagery and Type information from `api.normies.art`.
 - **Trait-native mechanic:** `Human`, `Cat`, `Alien`, `Agent`, and `Zombie` are the countdown bands.
-- **Global play:** presses, rounds, history, countries, and Type counts are coordinated server-side.
+- **Live multiplayer:** presses, rounds, history, countries, and Type counts are coordinated server-side.
+- **Responsive interface:** the game is designed for desktop and mobile play.
+- **Abuse-aware backend:** one-press-per-round logic, rapid-click throttling, and repeated-timing checks reduce scripted press spam.
 - **No wallet wall:** anyone can land, wait, regret it, and press.
 - **Hackathon-friendly:** the live JSON endpoint exposes state for quick inspection.
 
 ## The Countdown
 
-| Time left | Awarded Type | Vibe |
-| --- | --- | --- |
-| `1:00-0:49` | Human | the safe press |
-| `0:48-0:37` | Cat | patience starts |
-| `0:36-0:25` | Alien | unusual timing |
-| `0:24-0:13` | Agent | classified nerves |
-| `0:12-0:01` | Zombie | last-call brain fog |
+| Time left | Awarded Type |
+| --- | --- |
+| `1:00-0:49` | Human |
+| `0:48-0:37` | Cat |
+| `0:36-0:25` | Alien |
+| `0:24-0:13` | Agent |
+| `0:12-0:01` | Zombie |
 
 If nobody presses before zero, the round rolls on. If someone presses, the next global round starts immediately.
 
 Round `10000` is the final playable round. When it ends, the button freezes and declares the ultimate winning Type by total presses. As of `2026-06-30T12:23:39Z`, the live game was on Round `310`; if every remaining round runs the full 60 seconds, Round `10000` completes around `2026-07-07T05:54:39Z` UTC. Accepted presses can end rounds early, so the real finale can arrive sooner.
-
-## Zombie Notes
-
-```txt
-   [ZOMBIE WINDOW]
-   wait too long and the room gets loud
-   wait perfectly and the scoreboard remembers
-```
-
-- The `Zombie` window is the final twelve seconds.
-- It is intentionally stressful.
-- It is also where the best screenshots happen.
-- Easter egg rule of thumb: if the button feels like a bad idea, the design is working.
 
 ## Multiplayer Backend
 
@@ -96,14 +79,6 @@ browser
                  |-- Type counts
                  `-- submitted Normie replacement queue
 ```
-
-The Worker keeps the room honest:
-
-- one accepted press per visitor per round
-- throttling against rapid scripted presses
-- repeated-timing abuse checks
-- recent press history
-- private submitted-number log with owner-at-submission records
 
 ### Technical Architecture
 
