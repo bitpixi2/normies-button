@@ -114,6 +114,6 @@ Every sound in Normies Button is custom and agentically generated in the app wit
 
 ## Marketing
 
-Much of the Normies audience (besides four brave peope) told me they didn’t want to connect wallets to my first Hackathon entry [Scribblies](https://scribblies.deviantclaw.art/), so I listened. I started building 'Normies Button' with no wallet connection required, and made this YouTube-thumbnail image using ChatGPT Pro and Google Gemini to tell that story. Thank you for considering me, and good luck to everyone! ~ bitpixi.eth
+Much of the Normies audience (besides four brave peope) told me they didn’t want to connect wallets to my first Hackathon entry [Scribblies](https://scribblies.deviantclaw.art/), so I listened. I started building [Normies Button](https://normies-type-button.pages.dev/) with no wallet connection required, and made this YouTube-thumbnail image using ChatGPT Pro and Google Gemini to tell that story. Thank you for considering me, and good luck to everyone! ~ bitpixi.eth
 
 <center><img src="type-button/docs/images/button.jpeg" alt="Normies Button regret button" width="100%">
