@@ -2,57 +2,11 @@
 
 <img src="type-button/docs/images/normies-button-arena.png" alt="Normies Button live arena screenshot" width="100%">
 
-```txt
-+------------------------------------------------------------+
-|  NORMIES BUTTON                                            |
-|  Wait for your favorite Type, then press the button.        |
-+------------------------------------------------------------+
-```
-
-**A global multi-player button game for the Normies Hackathon. May the favorite Type win!**
+**Normies Button** turns the collection's `Type` trait into a live multiplayer timing ritual. Everyone sees the same global round. Wait for your favorite Type (Human, Cat, Alien, Agent, or Zombie) then press the button. Top-pressed Type at Round 10,000 wins forever! Created and submitted by bitpixi for the Normies Hackathon on June 30th, 2026. Inspired by Reddit's "The Button" game by Josh Wardle in 2015.
 
 [---> Play the live demo](https://normies-type-button.pages.dev/)
 
 [---> View the full data](https://normies-type-button-api.deviantclaw.workers.dev/state)
-
-Normies Button turns the collection's `Type` trait into a live timing ritual. Everyone sees the same global round. Wait for your favorite Type, then press the button.
-
-Inspired by Reddit's [The Button](https://en.wikipedia.org/wiki/The_Button_(Reddit)): a shared countdown where waiting changed what you became. Normies Button remixes that pressure with Normies Type windows.
-
-```txt
-          1:00-0:49 -> Human
-          0:48-0:37 -> Cat
-          0:36-0:25 -> Alien
-          0:24-0:13 -> Agent
-          0:12-0:01 -> Zombie
-```
-
-## What It Is
-
-Normies Button is a live multiplayer timing game built from the Normies `Type` trait. Everyone shares the same 60-second round, and the Type you receive depends on when you press.
-
-It is inspired by Reddit's The Button, where communities formed around the flair color earned by pressing at different times. This version maps that same social pressure onto Normies Types instead of colors: Human, Cat, Alien, Agent, and Zombie.
-
-## For the Judges
-
-```txt
-> visible API usage
-> fast walletless entry
-> live multiplayer backend
-> mobile responsive gameplay
-> readable rules in the first screen
-> safeguards for rapid or scripted presses
-> monochrome pixel UI with custom sprites
-> Zombie pressure in the final window
-```
-
-- **Live Normies data:** pulls collection imagery and Type information from `api.normies.art`.
-- **Trait-native mechanic:** `Human`, `Cat`, `Alien`, `Agent`, and `Zombie` are the countdown bands.
-- **Live multiplayer:** presses, rounds, history, countries, and Type counts are coordinated server-side.
-- **Responsive interface:** the game is designed for desktop and mobile play.
-- **Abuse-aware backend:** one-press-per-round logic, rapid-click throttling, and repeated-timing checks reduce scripted press spam.
-- **No wallet wall:** anyone can land, wait, regret it, and press.
-- **Hackathon-friendly:** the live JSON endpoint exposes state for quick inspection.
 
 ## The Countdown
 
@@ -66,37 +20,9 @@ It is inspired by Reddit's The Button, where communities formed around the flair
 
 If nobody presses before zero, the round rolls on. If someone presses, the next global round starts immediately.
 
-Round `10000` is the final playable round. When it ends, the button freezes and declares the ultimate winning Type by total presses. As of `2026-06-30T12:23:39Z`, the live game was on Round `310`; if every remaining round runs the full 60 seconds, Round `10000` completes around `2026-07-07T05:54:39Z` UTC. Accepted presses can end rounds early, so the real finale can arrive sooner.
+Round `10000` is the final playable round. When it ends, the button freezes and declares the ultimate winning Type by total presses. It's estimated that round `10000` could complete around 7 July, 2026 (1 week). Accepted presses can end rounds early, so the real finale could arrive sooner.
 
-## Multiplayer Backend
-
-```txt
-browser
-  `-- Cloudflare Pages
-       `-- Worker API
-            `-- Durable Object: global arena state
-                 |-- current round
-                 |-- press log
-                 |-- recent history
-                 |-- Type counts
-                 `-- submitted Normie replacement queue
-```
-
-### Technical Architecture
-
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "primaryTextColor": "#111111", "primaryBorderColor": "#111111", "lineColor": "#111111", "secondaryColor": "#f5f5f5", "tertiaryColor": "#ffffff", "fontFamily": "monospace"}}}%%
-flowchart TB
-  A["Player browser"] --> B["Cloudflare Pages<br/>React + Vite UI"]
-  B --> C["Worker API<br/>state, press, number"]
-  C --> D["Durable Object<br/>global arena"]
-  D --> E["Round state<br/>timer + Type counts"]
-  D --> F["SQLite logs<br/>presses + submitted IDs"]
-  C --> G["Normies API<br/>traits, images, owners"]
-  G --> D
-```
-
-### User Flow
+## User Flow
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "primaryTextColor": "#111111", "primaryBorderColor": "#111111", "lineColor": "#111111", "secondaryColor": "#f5f5f5", "tertiaryColor": "#ffffff", "fontFamily": "monospace"}}}%%
@@ -114,25 +40,63 @@ flowchart TB
   J -->|Yes| K["Ultimate Winner shown"]
 ```
 
-## Visual System
+## For the Judges
 
 ```txt
-[#] monochrome first
-[#] pixel glyphs for Type identity
-[#] button-stack sprite with pressed state
-[#] filigree HUD corners
-[#] no landing page; the game is the first screen
+> visible API usage
+> fast, walletless entry
+> live multiplayer backend
+> mobile responsive gameplay
+> readable rules in the first screen
+> safeguards for rapid or scripted presses
+> monochrome pixel UI with custom sprites
+> agentic music and 5 unique sound effects
+```
+
+- **Live Normies data:** pulls collection imagery and Type information from `api.normies.art`.
+- **Trait-native mechanic:** `Human`, `Cat`, `Alien`, `Agent`, and `Zombie` are the countdown bands.
+- **Live multiplayer:** presses, rounds, history, countries, and Type counts are coordinated server-side.
+- **Responsive interface:** the game is designed for desktop and mobile play.
+- **Abuse-aware backend:** one-press-per-round logic, rapid-click throttling, and repeated-timing checks reduce scripted press spam.
+- **No wallet wall:** anyone can land, wait, and press. even people without Normies may be inspired to purchase.
+- **Hackathon-friendly:** the live JSON endpoint exposes state for quick inspection.
+
+### Technical Architecture
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "primaryTextColor": "#111111", "primaryBorderColor": "#111111", "lineColor": "#111111", "secondaryColor": "#f5f5f5", "tertiaryColor": "#ffffff", "fontFamily": "monospace"}}}%%
+flowchart TB
+  A["Player browser"] --> B["Cloudflare Pages<br/>React + Vite UI"]
+  B --> C["Worker API<br/>state, press, number"]
+  C --> D["Durable Object<br/>global arena"]
+  D --> E["Round state<br/>timer + Type counts"]
+  D --> F["SQLite logs<br/>presses + submitted IDs"]
+  C --> G["Normies API<br/>traits, images, owners"]
+  G --> D
+```
+
+## Visual Choices
+
+```txt
+- monochrome first
+- pixel glyphs for Type identity by bitpixi
+- filigree HUD corners by bitpixi
+- button-stack sprite with pressed state by GhostAgent
+- the game is the first screen and mobile-responsive!
 ```
 
 ## Tech Stack
 
+```txt
 - React 19 + TypeScript + Vite
 - Cloudflare Pages frontend
 - Cloudflare Worker + Durable Object backend
 - Normies API integration
 - Vitest coverage for timing, scoring, API fallbacks, and formatting helpers
+```
 
-<img src="type-button/docs/images/button.jpeg" alt="Normies Button regret button" width="50%">
+## Marketing
 
-If you make a YouTube video playing Normies Button, I would love that. Please
-feel free to use this thumbnail; I would be so appreciative.
+Much of the Normies audience, besides four brave peope, told me they didn’t want to connect their wallets directly to my first Normies Hackathon entry [Scribblies](https://scribblies.deviantclaw.art/), so I listened. I started building games with no wallet connection required, and made this YouTube-thumbnail-style image using ChatGPT Pro and Google Gemini to tell that story. Thank you for considering me, and good luck to everyone! ~ bitpixi.eth
+
+<center><img src="type-button/docs/images/button.jpeg" alt="Normies Button regret button" width="100%">
