@@ -395,7 +395,6 @@ export function App() {
           musicGainRef,
           musicStepRef
         );
-        playButtonPressSound(true, audioContextRef, 0);
       } else {
         stopBackgroundMusic(musicTimerRef, musicGainRef);
       }

@@ -62,6 +62,7 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Softened the background chiptune further: 8% of sound-effect gain, smoother triangle/sine voices, lower harmony peaks, and no sharp octave duplicate layer.
 - Added generated link transition sound effects: link-like actions play an upward whoosh at sound-effect volume, while modal Close/overlay dismiss plays a downward whoosh.
 - Restored the background chiptune to the preferred 10% mix and earlier square/triangle texture, while keeping the sharp duplicate octave layer removed.
+- Removed the main button press sound from the audio toggle; turning audio on now only starts the background music.
 
 ## TODO
 - Configure the `NUMBER_LOG_KEY` Worker secret before using the private `/number-log` endpoint.
