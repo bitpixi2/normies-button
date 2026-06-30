@@ -11,7 +11,9 @@
 
 **A global multi-player button game for the Normies Hackathon. May the favorite Type win!**
 
-[Play the live demo](https://normies-type-button.pages.dev/) | [Normies API](https://api.normies.art) | [Live JSON state](https://normies-type-button-api.deviantclaw.workers.dev/state)
+[---> Play the live demo](https://normies-type-button.pages.dev/)
+
+[---> View the full data](https://normies-type-button-api.deviantclaw.workers.dev/state)
 
 Normies Button turns the collection's `Type` trait into a live timing ritual. Everyone sees the same global round. Wait for your favorite Type, then press the button.
 
