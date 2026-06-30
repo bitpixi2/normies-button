@@ -105,6 +105,38 @@ The Worker keeps the room honest:
 - recent press history
 - private submitted-number log with owner-at-submission records
 
+### Technical Architecture
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "primaryTextColor": "#111111", "primaryBorderColor": "#111111", "lineColor": "#111111", "secondaryColor": "#f5f5f5", "tertiaryColor": "#ffffff", "fontFamily": "monospace"}}}%%
+flowchart TB
+  A["Player browser"] --> B["Cloudflare Pages<br/>React + Vite UI"]
+  B --> C["Worker API<br/>state, press, number"]
+  C --> D["Durable Object<br/>global arena"]
+  D --> E["Round state<br/>timer + Type counts"]
+  D --> F["SQLite logs<br/>presses + submitted IDs"]
+  C --> G["Normies API<br/>traits, images, owners"]
+  G --> D
+```
+
+### User Flow
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "primaryTextColor": "#111111", "primaryBorderColor": "#111111", "lineColor": "#111111", "secondaryColor": "#f5f5f5", "tertiaryColor": "#ffffff", "fontFamily": "monospace"}}}%%
+flowchart TB
+  A["Open Normies Button"] --> B["Watch shared 60s round"]
+  B --> C{"Choose an action"}
+  C --> D["Wait for favorite Type"]
+  D --> E["Press button"]
+  E --> F["Type logged<br/>next round starts"]
+  C --> G["Send Normie ID"]
+  G --> H["Owner + Type fetched"]
+  H --> I["Matching Type image replaced"]
+  F --> J{"Round 10,000?"}
+  J -->|No| B
+  J -->|Yes| K["Ultimate Winner shown"]
+```
+
 ## Visual System
 
 ```txt
