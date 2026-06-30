@@ -1,4 +1,5 @@
 import {
+  FINAL_ROUND_ID,
   ROUND_SECONDS,
   getTypeForSecondsRemaining,
   type NormieType,
@@ -17,7 +18,8 @@ export const ARENA_API_BASE = (configuredApiBase || DEFAULT_API_BASE).replace(
   ""
 );
 
-export type ArenaStatus = "idle" | "active" | "expired";
+export type ArenaStatus = "idle" | "active" | "expired" | "finale";
+export type ArenaGameMode = "active" | "finale";
 
 export type ArenaPress = {
   roundId: number;
@@ -57,8 +59,18 @@ export type ArenaStats = {
   leadMargin: number;
 };
 
+export type ArenaFinale = {
+  winners: NormieType[];
+  winningCount: number;
+  isTie: boolean;
+  roundId: number;
+  completedAt: string | null;
+};
+
 export type ArenaState = {
   status: ArenaStatus;
+  gameMode: ArenaGameMode;
+  finalRoundId: number;
   roundId: number;
   serverNow: number;
   expiresAt: number | null;
@@ -72,6 +84,7 @@ export type ArenaState = {
   pendingNumber: ArenaNumber | null;
   typeImages: Record<NormieType, ArenaTypeImage>;
   stats: ArenaStats;
+  finale: ArenaFinale | null;
   visitorPressed: boolean;
   visitorRun: RunRecord | null;
 };
@@ -96,6 +109,8 @@ export function visitorTag(visitorId: string): string {
 export function fallbackArenaState(visitorId: string): ArenaState {
   return {
     status: "idle",
+    gameMode: "active",
+    finalRoundId: FINAL_ROUND_ID,
     roundId: 0,
     serverNow: Date.now(),
     expiresAt: null,
@@ -128,6 +143,7 @@ export function fallbackArenaState(visitorId: string): ArenaState {
       leadingCount: 0,
       leadMargin: 0
     },
+    finale: null,
     visitorPressed: false,
     visitorRun: null
   };

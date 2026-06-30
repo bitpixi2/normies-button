@@ -49,6 +49,11 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Added a Live History "More" link that opens the public backend `/state` JSON in a new tab so the tracked recentPresses history can be inspected beyond the visible 3 rows.
 - Removed stale reference/screenshot PNGs from the tracked repo, moved desktop modules lower with the footer closer to the viewport bottom, clarified Privacy copy for submitted Normie ID owner lookup, and added a footer link to Normie #2613.
 - Added footer Type glyph separators, a "Follow me on X" footer link, a README inspiration note for Reddit's The Button, slightly larger numeric text across Type rows, stats, history headers, and history timings, and changed the history JSON link label to "View all data". Human now replaces the hyphen inside the credit, with Cat/Alien/Agent/Zombie as the following footer interpuncts. Type row count labels now spell out total presses, the desktop lower-module offset now overrides the base layout margin, the desktop button column is nudged right, and the footer repo link says "Github Repo".
+- Added a Round 10000 finale mode: the Worker freezes after the final playable round, returns an ultimate winning Type summary with tie/no-press handling, and the UI replaces the button/timer area with an Ultimate Winner panel. Public demo links now point at `https://normiesbutton.deviantclaw.art`.
+- Nudged the desktop main modules up by 8px and added a README UTC estimate for the Round 10000 finale based on live Round 310 at `2026-06-30T12:23:39Z`.
+- Switched the finale winner panel to dark text on a light panel, added pixel audio on/off sprites in the Round header, persisted the mute toggle in localStorage, and added a generated Web Audio button thock on button press.
+- Updated both READMEs to use the live arena screenshot as the full-width hero and moved the regret-button image to the bottom at half width. The live Round header now reads `Round N / 10,000` beside the audio toggle.
+- Changed the global lead strip from light-on-dark to button-grey with dark text and added the leading Type glyph before the lead sentence.
 
 ## TODO
 - Configure the `NUMBER_LOG_KEY` Worker secret before using the private `/number-log` endpoint.

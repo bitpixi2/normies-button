@@ -4,9 +4,11 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode
 } from "react";
 import {
+  FINAL_ROUND_ID,
   ROUND_SECONDS,
   TYPE_WINDOWS,
   formatClock,
@@ -22,6 +24,7 @@ import {
   ensureVisitorId,
   submitRoundNumber,
   type ArenaPress,
+  type ArenaFinale,
   type ArenaState,
   type ArenaTypeImage
 } from "./arenaApi";
@@ -37,6 +40,7 @@ const TYPE_IMAGE_FLASH_MS = 1100;
 const BUTTON_TAP_FEEDBACK_MS = 180;
 const HAPTIC_STRONG_PATTERN = [35, 24, 35];
 const HAPTIC_SOFT_TAP_MS = 6;
+const AUDIO_STORAGE_KEY = "normies-button:audio-enabled";
 type InfoModal = "terms" | "privacy" | null;
 
 const configuredIdlePauseMs = Number.parseInt(
@@ -62,12 +66,14 @@ export function App() {
   const [isButtonTapping, setIsButtonTapping] = useState(false);
   const [isIdlePaused, setIsIdlePaused] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModal>(null);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(readAudioPreference);
   const flashTimeoutRef = useRef<number | null>(null);
   const typeFlashTimeoutRef = useRef<number | null>(null);
   const typeImageKeysRef = useRef<Record<string, string> | null>(null);
   const typeImagesHydratedRef = useRef(false);
   const tapTimeoutRef = useRef<number | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const syncArenaState = useCallback(async () => {
     try {
@@ -167,21 +173,31 @@ export function App() {
   }, [arena.typeImages]);
 
   const adjustedNow = nowMs + (arena.serverNow - Date.now());
+  const isFinale = arena.gameMode === "finale" || arena.status === "finale";
+  const finalRoundId = arena.finalRoundId || FINAL_ROUND_ID;
   const displayedRemaining =
-    arena.status === "active" && arena.expiresAt
+    isFinale
+      ? 0
+      : arena.status === "active" && arena.expiresAt
       ? Math.min(
           ROUND_SECONDS,
           getSecondsRemainingUntil(arena.expiresAt, adjustedNow)
         )
       : ROUND_SECONDS;
   const activeType =
-    arena.status === "active"
+    arena.status === "active" && !isFinale
       ? getTypeForSecondsRemaining(displayedRemaining)
       : null;
-  const displayedType = arena.status === "active" ? activeType ?? "None" : "Ready";
+  const displayedType = isFinale
+    ? "Finale"
+    : arena.status === "active"
+      ? activeType ?? "None"
+      : "Ready";
   const activeTypeGlyph = activeType ? typeGlyphSrc(activeType) : null;
   const progress =
-    arena.status === "active"
+    isFinale
+      ? 100
+      : arena.status === "active"
       ? ((ROUND_SECONDS - displayedRemaining) / ROUND_SECONDS) * 100
       : 0;
   const ownType = arena.visitorRun?.awardedType ?? null;
@@ -200,8 +216,11 @@ export function App() {
     const renderGameToText = () =>
       JSON.stringify({
         surface: "HTML UI, origin at top-left, x right, y down",
+        gameMode: arena.gameMode,
         status: arena.status,
         roundId: arena.roundId,
+        finalRoundId,
+        finale: arena.finale,
         currentType: activeType,
         displayedRemaining,
         totalPresses: arena.totalPresses,
@@ -221,7 +240,7 @@ export function App() {
         delete window.render_game_to_text;
       }
     };
-  }, [activeType, arena, displayedRemaining, ownType, recentPresses]);
+  }, [activeType, arena, displayedRemaining, finalRoundId, ownType, recentPresses]);
 
   useEffect(() => {
     return () => {
@@ -236,6 +255,10 @@ export function App() {
       }
       if (idleTimeoutRef.current !== null) {
         window.clearTimeout(idleTimeoutRef.current);
+      }
+      if (audioContextRef.current) {
+        void audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
       }
     };
   }, []);
@@ -253,7 +276,7 @@ export function App() {
   };
 
   const handleAction = async () => {
-    if (isBusy) {
+    if (isBusy || isFinale) {
       return;
     }
 
@@ -286,6 +309,7 @@ export function App() {
 
   const triggerButtonFeedback = () => {
     triggerHaptic(HAPTIC_STRONG_PATTERN);
+    playButtonPressSound(isAudioEnabled, audioContextRef);
 
     if (tapTimeoutRef.current !== null) {
       window.clearTimeout(tapTimeoutRef.current);
@@ -298,9 +322,21 @@ export function App() {
     }, BUTTON_TAP_FEEDBACK_MS);
   };
 
+  const handleAudioToggle = () => {
+    triggerSoftHaptic();
+    setIsAudioEnabled((current) => {
+      const next = !current;
+      writeAudioPreference(next);
+      if (next) {
+        playButtonPressSound(true, audioContextRef);
+      }
+      return next;
+    });
+  };
+
   const handleNumberSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isNumberBusy) return;
+    if (isNumberBusy || isFinale) return;
     triggerSoftHaptic();
 
     const parsedNumber = normalizeNormieIdInput(numberInput);
@@ -405,24 +441,30 @@ export function App() {
             </div>
 
             <div className="clock-shell" aria-live="polite">
-              <div className="progress-track">
-                <div
-                  className="progress-fill"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="clock">{formatClock(displayedRemaining)}</div>
-              <button
-                className={`button-core ${
-                  isBusy && arena.status === "active" ? "is-pressed" : ""
-                } ${isButtonTapping ? "is-tapping" : ""}`}
-                type="button"
-                onClick={handleAction}
-                aria-label={actionLabel}
-                disabled={isBusy}
-              >
-                <span className="generated-button-sprite" aria-hidden="true" />
-              </button>
+              {isFinale ? (
+                <FinalePanel finale={arena.finale} finalRoundId={finalRoundId} />
+              ) : (
+                <>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="clock">{formatClock(displayedRemaining)}</div>
+                  <button
+                    className={`button-core ${
+                      isBusy && arena.status === "active" ? "is-pressed" : ""
+                    } ${isButtonTapping ? "is-tapping" : ""}`}
+                    type="button"
+                    onClick={handleAction}
+                    aria-label={actionLabel}
+                    disabled={isBusy}
+                  >
+                    <span className="generated-button-sprite" aria-hidden="true" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -435,9 +477,29 @@ export function App() {
           <div className="score-heading">
             <div>
               <h2>
-                Round <span className="number-text">{arena.roundId}</span>
+                Round <span className="number-text">{arena.roundId}</span> /{" "}
+                <span className="number-text">{finalRoundId.toLocaleString()}</span>
               </h2>
             </div>
+            <button
+              aria-label={isAudioEnabled ? "Mute button sound" : "Unmute button sound"}
+              aria-pressed={!isAudioEnabled}
+              className="audio-toggle"
+              onClick={handleAudioToggle}
+              type="button"
+            >
+              <img
+                alt=""
+                aria-hidden="true"
+                height="32"
+                src={
+                  isAudioEnabled
+                    ? "/assets/audio-on-pixel.svg"
+                    : "/assets/audio-off-pixel.svg"
+                }
+                width="32"
+              />
+            </button>
           </div>
 
           <section className="number-panel" aria-label="Next round number">
@@ -459,8 +521,9 @@ export function App() {
                   pattern="#?[0-9]*"
                   type="text"
                   value={numberInput}
+                  disabled={isFinale}
                 />
-                <button type="submit" disabled={isNumberBusy}>
+                <button type="submit" disabled={isNumberBusy || isFinale}>
                   {isNumberBusy ? "..." : "Send"}
                 </button>
               </div>
@@ -472,7 +535,9 @@ export function App() {
             )}
 
             <div className="number-help">
-              They will replace their same Type in the countdown on next turn.
+              {isFinale
+                ? "Finale locked. Submitted Normies are closed."
+                : "They will replace their same Type in the countdown on next turn."}
             </div>
           </section>
 
@@ -631,6 +696,49 @@ function FooterTypeGlyph({ type }: { type: string }) {
   );
 }
 
+function FinalePanel({
+  finale,
+  finalRoundId
+}: {
+  finale: ArenaFinale | null;
+  finalRoundId: number;
+}) {
+  const winners = finale?.winners ?? [];
+
+  return (
+    <section className="finale-panel" aria-label="Ultimate winner">
+      <span className="eyebrow">Ultimate Winner</span>
+      <div className="finale-winners">
+        {winners.length > 0 ? (
+          winners.map((type) => (
+            <img
+              alt=""
+              aria-hidden="true"
+              className="finale-type-glyph"
+              height="56"
+              key={type}
+              src={typeGlyphSrc(type)}
+              width="56"
+            />
+          ))
+        ) : (
+          <span className="finale-empty-glyph" aria-hidden="true">
+            --
+          </span>
+        )}
+      </div>
+      <strong>
+        {winners.length > 0 ? formatTypeList(winners) : "No Type"}
+      </strong>
+      <p>{formatUltimateWinnerCopy(finale)}</p>
+      <span className="finale-round">
+        Round <span className="number-text">{finalRoundId.toLocaleString()}</span>{" "}
+        complete
+      </span>
+    </section>
+  );
+}
+
 function InfoDialog({
   kind,
   onClose
@@ -716,9 +824,72 @@ function PrivacyCopy() {
 }
 
 function buttonLabel(arena: ArenaState): string {
+  if (arena.status === "finale") return "Finale";
   if (arena.status === "active") return "Press";
   if (arena.status === "expired") return "Revive";
   return "Start";
+}
+
+function readAudioPreference() {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(AUDIO_STORAGE_KEY) !== "off";
+}
+
+function writeAudioPreference(isEnabled: boolean) {
+  try {
+    window.localStorage.setItem(AUDIO_STORAGE_KEY, isEnabled ? "on" : "off");
+  } catch {}
+}
+
+function playButtonPressSound(
+  isEnabled: boolean,
+  audioContextRef: MutableRefObject<AudioContext | null>
+) {
+  if (!isEnabled || typeof window === "undefined") return;
+
+  const AudioContextConstructor =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+  if (!AudioContextConstructor) return;
+
+  const context =
+    audioContextRef.current ??
+    new AudioContextConstructor({ latencyHint: "interactive" });
+  audioContextRef.current = context;
+
+  const startedAt = context.currentTime;
+  const clickOscillator = context.createOscillator();
+  const bodyOscillator = context.createOscillator();
+  const clickGain = context.createGain();
+  const bodyGain = context.createGain();
+  const masterGain = context.createGain();
+
+  clickOscillator.type = "square";
+  clickOscillator.frequency.setValueAtTime(820, startedAt);
+  clickOscillator.frequency.exponentialRampToValueAtTime(220, startedAt + 0.035);
+  clickGain.gain.setValueAtTime(0.001, startedAt);
+  clickGain.gain.exponentialRampToValueAtTime(0.11, startedAt + 0.004);
+  clickGain.gain.exponentialRampToValueAtTime(0.001, startedAt + 0.055);
+
+  bodyOscillator.type = "triangle";
+  bodyOscillator.frequency.setValueAtTime(145, startedAt);
+  bodyOscillator.frequency.exponentialRampToValueAtTime(72, startedAt + 0.09);
+  bodyGain.gain.setValueAtTime(0.001, startedAt);
+  bodyGain.gain.exponentialRampToValueAtTime(0.18, startedAt + 0.008);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, startedAt + 0.12);
+
+  masterGain.gain.setValueAtTime(0.2, startedAt);
+  masterGain.gain.exponentialRampToValueAtTime(0.001, startedAt + 0.13);
+
+  clickOscillator.connect(clickGain).connect(masterGain);
+  bodyOscillator.connect(bodyGain).connect(masterGain);
+  masterGain.connect(context.destination);
+
+  clickOscillator.start(startedAt);
+  bodyOscillator.start(startedAt);
+  clickOscillator.stop(startedAt + 0.06);
+  bodyOscillator.stop(startedAt + 0.13);
 }
 
 function historyPressKey(press: ArenaPress): string {
@@ -838,6 +1009,18 @@ export function formatGlobalLeadCopy(stats: ArenaState["stats"]): string {
   return `${pluralizeType(tiedTypes[0])} leading by ${stats.leadMargin} ${pluralizePress(stats.leadMargin)}`;
 }
 
+export function formatUltimateWinnerCopy(finale: ArenaFinale | null): string {
+  if (!finale || finale.winningCount <= 0 || finale.winners.length === 0) {
+    return "No Type won. The button outlasted everyone.";
+  }
+
+  if (finale.isTie) {
+    return `${formatTypeList(finale.winners)} share the win at ${finale.winningCount.toLocaleString()} ${pluralizePress(finale.winningCount)}`;
+  }
+
+  return `${pluralizeType(finale.winners[0])} win with ${finale.winningCount.toLocaleString()} ${pluralizePress(finale.winningCount)}`;
+}
+
 function renderGlobalLeadCopy(
   stats: ArenaState["stats"],
   fallbackCopy: string
@@ -859,19 +1042,42 @@ function renderGlobalLeadCopy(
   if (tiedTypes.length > 1) {
     return (
       <>
-        {formatTypeList(tiedTypes)} are tied at{" "}
-        <span className="number-text">{topCount}</span>{" "}
-        {pluralizePress(topCount)}
+        <LeadTypeGlyphs types={tiedTypes} />
+        <span>
+          {formatTypeList(tiedTypes)} are tied at{" "}
+          <span className="number-text">{topCount}</span>{" "}
+          {pluralizePress(topCount)}
+        </span>
       </>
     );
   }
 
   return (
     <>
-      {pluralizeType(tiedTypes[0])} leading by{" "}
-      <span className="number-text">{stats.leadMargin}</span>{" "}
-      {pluralizePress(stats.leadMargin)}
+      <LeadTypeGlyphs types={tiedTypes} />
+      <span>
+        {pluralizeType(tiedTypes[0])} leading by{" "}
+        <span className="number-text">{stats.leadMargin}</span>{" "}
+        {pluralizePress(stats.leadMargin)}
+      </span>
     </>
+  );
+}
+
+function LeadTypeGlyphs({ types }: { types: string[] }) {
+  return (
+    <span className="lead-type-glyphs" aria-hidden="true">
+      {types.map((type) => (
+        <img
+          alt=""
+          className="lead-type-glyph"
+          height="24"
+          key={type}
+          src={typeGlyphSrc(type)}
+          width="24"
+        />
+      ))}
+    </span>
   );
 }
 

@@ -1,5 +1,6 @@
 const ROUND_SECONDS = 60;
 const ROUND_MS = ROUND_SECONDS * 1000;
+export const FINAL_ROUND_ID = 10000;
 const HISTORY_LIMIT = 24;
 const HISTORY_STORAGE_KEY = "pressHistory";
 const PENDING_NUMBER_STORAGE_KEY = "pendingNumber";
@@ -124,7 +125,7 @@ export class ArenaObject {
       await this.saveRound(normalized);
     }
 
-    if (normalized.status === "active") {
+    if (normalized.status === "active" || normalized.status === "finale") {
       return this.stateForVisitor(normalized, visitorId, now);
     }
 
@@ -172,7 +173,7 @@ export class ArenaObject {
     const remainingSeconds = secondsRemaining(round.expiresAt, now);
     const type = typeForSecondsRemaining(remainingSeconds);
     if (!type) {
-      const nextRound = await this.createActiveRound(round.roundId + 1, now);
+      const nextRound = await this.createRoundAfterEnd(round, now);
       await this.saveRound(nextRound);
       return this.stateForVisitor(nextRound, visitorId, now);
     }
@@ -205,11 +206,7 @@ export class ArenaObject {
     await this.markPressThrottle(throttleKeys, now);
     await this.markPressTiming(timingKeys, timingBucket);
     const recentPresses = await this.addHistoryPress(press);
-    const nextRound = await this.createActiveRound(
-      round.roundId + 1,
-      now,
-      pressedRound
-    );
+    const nextRound = await this.createRoundAfterEnd(pressedRound, now);
     await this.saveRound(nextRound);
     return this.stateForVisitor(nextRound, visitorId, now, recentPresses);
   }
@@ -268,6 +265,14 @@ export class ArenaObject {
     }
 
     const now = Date.now();
+    const { round, changed } = await this.normalizeRound(now);
+    if (changed) {
+      await this.saveRound(round);
+    }
+    if (round.status === "finale") {
+      return this.stateForVisitor(round, visitorId, now);
+    }
+
     const value = parseSubmittedNumber(submittedNumber);
     const details = await lookupNormieDetails(value);
     if (!details.normieType) {
@@ -285,7 +290,6 @@ export class ArenaObject {
       timestamp: new Date(now).toISOString()
     };
 
-    const { round, changed } = await this.normalizeRound(now);
     await this.logSubmittedNumber({
       tokenId: value,
       owner: details.owner,
@@ -306,10 +310,6 @@ export class ArenaObject {
       source: "submitted"
     });
 
-    if (changed) {
-      await this.saveRound(round);
-    }
-
     return this.stateForVisitor(round, visitorId, now);
   }
 
@@ -327,7 +327,12 @@ export class ArenaObject {
     const visitorPress = visitorId
       ? await this.state.storage.get(pressStorageKey(round.roundId, visitorId))
       : null;
-    const remaining = round.expiresAt ? secondsRemaining(round.expiresAt, now) : ROUND_SECONDS;
+    const remaining =
+      round.status === "finale"
+        ? 0
+        : round.expiresAt
+          ? secondsRemaining(round.expiresAt, now)
+          : ROUND_SECONDS;
     const history = normalizeHistory(
       recentPresses || (await this.getHistory()),
       round
@@ -335,9 +340,15 @@ export class ArenaObject {
     const pendingNumber = await this.getPendingNumber();
     const stats = this.readPressStats();
     const typeImages = await this.getTypeImages();
+    const finale =
+      round.status === "finale"
+        ? createFinaleSummary(stats.typeCounts, round)
+        : null;
 
     return {
       status: round.status,
+      gameMode: round.status === "finale" ? "finale" : "active",
+      finalRoundId: FINAL_ROUND_ID,
       roundId: round.roundId,
       serverNow: now,
       expiresAt: round.expiresAt,
@@ -352,6 +363,7 @@ export class ArenaObject {
       pendingNumber,
       typeImages,
       stats,
+      finale,
       visitorPressed: Boolean(visitorPress),
       visitorRun: visitorPress
         ? {
@@ -377,9 +389,13 @@ export class ArenaObject {
   async normalizeRound(now) {
     const normalized = normalizeRoundShape(await this.getRound());
 
+    if (normalized.status === "finale") {
+      return { round: createFinaleRound(normalized), changed: false };
+    }
+
     if (normalized.status === "expired") {
       return {
-        round: await this.createActiveRound(normalized.roundId + 1, now, normalized),
+        round: await this.createRoundAfterEnd(normalized, now),
         changed: true
       };
     }
@@ -387,7 +403,7 @@ export class ArenaObject {
     if (normalized.status === "active") {
       if (!normalized.expiresAt || normalized.expiresAt <= now) {
         return {
-          round: await this.createActiveRound(normalized.roundId + 1, now, normalized),
+          round: await this.createRoundAfterEnd(normalized, now),
           changed: true
         };
       }
@@ -406,6 +422,15 @@ export class ArenaObject {
   async createActiveRound(roundId, now, previousRound = null) {
     const featuredNumber = await this.consumePendingNumber();
     return createActiveRound(roundId, now, featuredNumber, previousRound);
+  }
+
+  async createRoundAfterEnd(round, now) {
+    if (round.roundId >= FINAL_ROUND_ID) {
+      return createFinaleRound(round);
+    }
+
+    const featuredNumber = await this.consumePendingNumber();
+    return createActiveRound(round.roundId + 1, now, featuredNumber, round);
   }
 
   async getPendingNumber() {
@@ -699,7 +724,7 @@ function defaultRound() {
   };
 }
 
-function createActiveRound(
+export function createActiveRound(
   roundId,
   now,
   featuredNumber = null,
@@ -709,6 +734,10 @@ function createActiveRound(
     ? normalizeRoundShape(previousRound)
     : defaultRound();
 
+  if (roundId > FINAL_ROUND_ID) {
+    return createFinaleRound(normalizedPrevious);
+  }
+
   return {
     status: "active",
     roundId,
@@ -717,6 +746,32 @@ function createActiveRound(
     pressCounts: { ...normalizedPrevious.pressCounts },
     lastPress: null,
     featuredNumber: normalizeNumberRecord(featuredNumber)
+  };
+}
+
+export function createRoundAfterEnd(round, now, featuredNumber = null) {
+  const normalized = normalizeRoundShape(round);
+  if (normalized.roundId >= FINAL_ROUND_ID) {
+    return createFinaleRound(normalized);
+  }
+
+  return createActiveRound(
+    normalized.roundId + 1,
+    now,
+    featuredNumber,
+    normalized
+  );
+}
+
+export function createFinaleRound(round) {
+  const normalized = normalizeRoundShape(round);
+
+  return {
+    ...normalized,
+    status: "finale",
+    roundId: FINAL_ROUND_ID,
+    expiresAt: null,
+    featuredNumber: normalizeNumberRecord(normalized.featuredNumber)
   };
 }
 
@@ -732,12 +787,45 @@ function startingRoundId(round) {
   return round.roundId + 1;
 }
 
-function normalizeRoundShape(round) {
+export function normalizeRoundShape(round) {
   return {
     ...defaultRound(),
     ...round,
-    pressCounts: { ...INITIAL_COUNTS, ...(round.pressCounts || {}) },
-    featuredNumber: normalizeNumberRecord(round.featuredNumber)
+    status: round?.status === "finale" ? "finale" : round?.status || "idle",
+    roundId:
+      typeof round?.roundId === "number"
+        ? Math.min(round.roundId, FINAL_ROUND_ID)
+        : 0,
+    pressCounts: { ...INITIAL_COUNTS, ...(round?.pressCounts || {}) },
+    featuredNumber: normalizeNumberRecord(round?.featuredNumber)
+  };
+}
+
+export function calculateUltimateWinner(typeCounts) {
+  const normalizedCounts = Object.fromEntries(
+    TYPES.map((type) => [type, Number(typeCounts?.[type]) || 0])
+  );
+  const winningCount = Math.max(...Object.values(normalizedCounts));
+  const winners =
+    winningCount > 0
+      ? TYPES.filter((type) => normalizedCounts[type] === winningCount)
+      : [];
+
+  return {
+    winners,
+    winningCount,
+    isTie: winners.length > 1
+  };
+}
+
+function createFinaleSummary(typeCounts, round) {
+  return {
+    ...calculateUltimateWinner(typeCounts),
+    roundId: FINAL_ROUND_ID,
+    completedAt:
+      typeof round.lastPress?.timestamp === "string"
+        ? round.lastPress.timestamp
+        : null
   };
 }
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatGlobalLeadCopy, normalizeNormieIdInput } from "./App";
+import {
+  formatGlobalLeadCopy,
+  formatUltimateWinnerCopy,
+  normalizeNormieIdInput
+} from "./App";
 
 describe("Normie ID input", () => {
   it("accepts plain and hash-prefixed Normies IDs", () => {
@@ -74,5 +78,43 @@ describe("Global leaderboard copy", () => {
         leadMargin: 0
       })
     ).toBe("No Type leading yet");
+  });
+});
+
+describe("Ultimate winner copy", () => {
+  it("reports a single ultimate Type winner", () => {
+    expect(
+      formatUltimateWinnerCopy({
+        winners: ["Zombie"],
+        winningCount: 44,
+        isTie: false,
+        roundId: 10000,
+        completedAt: "2026-06-30T00:00:00.000Z"
+      })
+    ).toBe("Zombies win with 44 presses");
+  });
+
+  it("reports ultimate Type ties", () => {
+    expect(
+      formatUltimateWinnerCopy({
+        winners: ["Human", "Cat"],
+        winningCount: 12,
+        isTie: true,
+        roundId: 10000,
+        completedAt: null
+      })
+    ).toBe("Humans and Cats share the win at 12 presses");
+  });
+
+  it("has a no-press finale fallback", () => {
+    expect(
+      formatUltimateWinnerCopy({
+        winners: [],
+        winningCount: 0,
+        isTie: false,
+        roundId: 10000,
+        completedAt: null
+      })
+    ).toBe("No Type won. The button outlasted everyone.");
   });
 });

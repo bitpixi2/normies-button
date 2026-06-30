@@ -1,6 +1,6 @@
 # Normies Button
 
-![Normies Button regret button](docs/images/button.jpeg)
+<img src="docs/images/normies-button-arena.png" alt="Normies Button live arena screenshot" width="100%">
 
 ```txt
 +------------------------------------------------------------+
@@ -11,7 +11,7 @@
 
 **A global one-minute button game for the Normies Hackathon.**
 
-[Play the live demo](https://normies-type-button.pages.dev) | [Normies API](https://api.normies.art) | [Live JSON state](https://normies-type-button-api.deviantclaw.workers.dev/state)
+[Play the live demo](https://normiesbutton.deviantclaw.art) | [Normies API](https://api.normies.art) | [Live JSON state](https://normies-type-button-api.deviantclaw.workers.dev/state)
 
 Normies Button turns the collection's `Type` trait into a live timing ritual. Everyone sees the same global round. Wait for your favorite Type, then press the button.
 
@@ -67,6 +67,8 @@ The hackathon idea is simple: make Normies data playable. This is not a gallery 
 | `0:12-0:01` | Zombie | last-call brain fog |
 
 If nobody presses before zero, the round rolls on. If someone presses, the next global round starts immediately.
+
+Round `10000` is the final playable round. When it ends, the button freezes and declares the ultimate winning Type by total presses. As of `2026-06-30T12:23:39Z`, the live game was on Round `310`; if every remaining round runs the full 60 seconds, Round `10000` completes around `2026-07-07T05:54:39Z` UTC. Accepted presses can end rounds early, so the real finale can arrive sooner.
 
 ## Zombie Notes
 
@@ -145,3 +147,5 @@ This deploys the Worker API first, then the Cloudflare Pages frontend.
 |  "Good. That means it worked." |
 +-------------------------------+
 ```
+
+<img src="docs/images/button.jpeg" alt="Normies Button regret button" width="50%">

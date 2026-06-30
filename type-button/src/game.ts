@@ -1,4 +1,5 @@
 export const ROUND_SECONDS = 60;
+export const FINAL_ROUND_ID = 10000;
 export const HISTORY_LIMIT = 40;
 
 export type NormieType = "Human" | "Cat" | "Alien" | "Agent" | "Zombie";
