@@ -41,6 +41,9 @@ const BUTTON_TAP_FEEDBACK_MS = 180;
 const HAPTIC_STRONG_PATTERN = [35, 24, 35];
 const HAPTIC_SOFT_TAP_MS = 6;
 const AUDIO_STORAGE_KEY = "normies-button:audio-enabled";
+const SOUND_EFFECT_MASTER_GAIN = 0.2;
+const BACKGROUND_MUSIC_GAIN_RATIO = 0.36;
+const BACKGROUND_MUSIC_STEP_MS = 240;
 type InfoModal = "terms" | "privacy" | null;
 
 const configuredIdlePauseMs = Number.parseInt(
@@ -75,6 +78,9 @@ export function App() {
   const idleTimeoutRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const buttonSoundVariantRef = useRef(0);
+  const musicTimerRef = useRef<number | null>(null);
+  const musicGainRef = useRef<GainNode | null>(null);
+  const musicStepRef = useRef(0);
 
   const syncArenaState = useCallback(async () => {
     try {
@@ -245,6 +251,30 @@ export function App() {
   }, [activeType, arena, displayedRemaining, finalRoundId, ownType, recentPresses]);
 
   useEffect(() => {
+    if (!isAudioEnabled) {
+      stopBackgroundMusic(musicTimerRef, musicGainRef);
+      return undefined;
+    }
+
+    const handleAudioStart = () => {
+      startBackgroundMusic(
+        true,
+        audioContextRef,
+        musicTimerRef,
+        musicGainRef,
+        musicStepRef
+      );
+    };
+
+    window.addEventListener("pointerdown", handleAudioStart);
+    window.addEventListener("keydown", handleAudioStart);
+    return () => {
+      window.removeEventListener("pointerdown", handleAudioStart);
+      window.removeEventListener("keydown", handleAudioStart);
+    };
+  }, [isAudioEnabled]);
+
+  useEffect(() => {
     return () => {
       if (flashTimeoutRef.current !== null) {
         window.clearTimeout(flashTimeoutRef.current);
@@ -258,6 +288,7 @@ export function App() {
       if (idleTimeoutRef.current !== null) {
         window.clearTimeout(idleTimeoutRef.current);
       }
+      stopBackgroundMusic(musicTimerRef, musicGainRef);
       if (audioContextRef.current) {
         void audioContextRef.current.close().catch(() => {});
         audioContextRef.current = null;
@@ -311,6 +342,13 @@ export function App() {
 
   const triggerButtonFeedback = () => {
     triggerHaptic(HAPTIC_STRONG_PATTERN);
+    startBackgroundMusic(
+      isAudioEnabled,
+      audioContextRef,
+      musicTimerRef,
+      musicGainRef,
+      musicStepRef
+    );
     const soundVariant = buttonSoundVariantRef.current;
     buttonSoundVariantRef.current = (buttonSoundVariantRef.current + 1) % 2;
     playButtonPressSound(isAudioEnabled, audioContextRef, soundVariant);
@@ -332,7 +370,16 @@ export function App() {
       const next = !current;
       writeAudioPreference(next);
       if (next) {
+        startBackgroundMusic(
+          true,
+          audioContextRef,
+          musicTimerRef,
+          musicGainRef,
+          musicStepRef
+        );
         playButtonPressSound(true, audioContextRef, 0);
+      } else {
+        stopBackgroundMusic(musicTimerRef, musicGainRef);
       }
       return next;
     });
@@ -489,7 +536,7 @@ export function App() {
               </h2>
             </div>
             <button
-              aria-label={isAudioEnabled ? "Mute button sound" : "Unmute button sound"}
+              aria-label={isAudioEnabled ? "Mute audio" : "Unmute audio"}
               aria-pressed={!isAudioEnabled}
               className="audio-toggle"
               onClick={handleAudioToggle}
@@ -896,7 +943,7 @@ function playButtonPressSound(
   );
   bodyGain.gain.exponentialRampToValueAtTime(0.001, startedAt + 0.12);
 
-  masterGain.gain.setValueAtTime(0.2, startedAt);
+  masterGain.gain.setValueAtTime(SOUND_EFFECT_MASTER_GAIN, startedAt);
   masterGain.gain.exponentialRampToValueAtTime(0.001, startedAt + 0.13);
 
   clickOscillator.connect(clickGain).connect(masterGain);
@@ -944,6 +991,102 @@ function playNormieSubmitSound(
   });
 }
 
+function startBackgroundMusic(
+  isEnabled: boolean,
+  audioContextRef: MutableRefObject<AudioContext | null>,
+  musicTimerRef: MutableRefObject<number | null>,
+  musicGainRef: MutableRefObject<GainNode | null>,
+  musicStepRef: MutableRefObject<number>
+) {
+  const context = getAudioContext(isEnabled, audioContextRef);
+  if (!context || musicTimerRef.current !== null) return;
+
+  const musicGain = context.createGain();
+  const now = context.currentTime;
+  musicGain.gain.setValueAtTime(0.001, now);
+  musicGain.gain.exponentialRampToValueAtTime(
+    SOUND_EFFECT_MASTER_GAIN * BACKGROUND_MUSIC_GAIN_RATIO,
+    now + 0.35
+  );
+  musicGain.connect(context.destination);
+  musicGainRef.current = musicGain;
+
+  const playStep = () => {
+    if (!musicGainRef.current) return;
+    playBackgroundMusicStep(context, musicGainRef.current, musicStepRef.current);
+    musicStepRef.current += 1;
+  };
+
+  playStep();
+  musicTimerRef.current = window.setInterval(
+    playStep,
+    BACKGROUND_MUSIC_STEP_MS
+  );
+}
+
+function stopBackgroundMusic(
+  musicTimerRef: MutableRefObject<number | null>,
+  musicGainRef: MutableRefObject<GainNode | null>
+) {
+  if (musicTimerRef.current !== null) {
+    window.clearInterval(musicTimerRef.current);
+    musicTimerRef.current = null;
+  }
+
+  const musicGain = musicGainRef.current;
+  if (!musicGain) return;
+
+  const context = musicGain.context;
+  const now = context.currentTime;
+  musicGain.gain.cancelScheduledValues(now);
+  musicGain.gain.setValueAtTime(Math.max(0.001, musicGain.gain.value), now);
+  musicGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+  window.setTimeout(() => musicGain.disconnect(), 260);
+  musicGainRef.current = null;
+}
+
+function playBackgroundMusicStep(
+  context: AudioContext,
+  destination: GainNode,
+  step: number
+) {
+  const melody = [
+    261.63,
+    329.63,
+    392,
+    523.25,
+    392,
+    329.63,
+    293.66,
+    392,
+    349.23,
+    440,
+    523.25,
+    659.25,
+    523.25,
+    440,
+    392,
+    329.63
+  ];
+  const frequency = melody[step % melody.length];
+  const startedAt = context.currentTime + 0.012;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+
+  oscillator.type = step % 4 === 0 ? "square" : "triangle";
+  oscillator.frequency.setValueAtTime(frequency, startedAt);
+  gain.gain.setValueAtTime(0.001, startedAt);
+  gain.gain.exponentialRampToValueAtTime(0.16, startedAt + 0.018);
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    startedAt + BACKGROUND_MUSIC_STEP_MS / 1000 - 0.03
+  );
+
+  oscillator.connect(gain).connect(destination);
+  oscillator.start(startedAt);
+  oscillator.stop(startedAt + BACKGROUND_MUSIC_STEP_MS / 1000 - 0.02);
+}
+
 function getAudioContext(
   isEnabled: boolean,
   audioContextRef: MutableRefObject<AudioContext | null>
@@ -960,6 +1103,9 @@ function getAudioContext(
     audioContextRef.current ??
     new AudioContextConstructor({ latencyHint: "interactive" });
   audioContextRef.current = context;
+  if (context.state === "suspended") {
+    void context.resume().catch(() => {});
+  }
   return context;
 }
 

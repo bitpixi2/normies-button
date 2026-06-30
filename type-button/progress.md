@@ -56,6 +56,8 @@ Original prompt: Build and iterate the Normies Type Button web game, now global-
 - Changed the global lead strip from light-on-dark to button-grey with dark text and added the leading Type glyph before the lead sentence.
 - Changed the lead/stat copy to use `total press/presses`, simplified the submitted Normie helper copy, made finale history fall back to the SQL press log if needed, added alternating button press sounds, and added a sprinkle/charm sound after successful Normie submissions.
 - Updated Terms to describe immediate shared rounds and current abuse safeguards. Finale winner rows now keep the arrow/selected state, and the desktop Ultimate Winner panel stretches to match the full Type stack height with wider side gutters.
+- Added gentle generated chiptune background music behind the game. It starts after the first user interaction or when audio is toggled on, uses the same audio toggle as effects, and runs at 36% of the sound-effect master gain.
+- Replaced the README hero screenshot with the latest desktop capture provided by the user.
 
 ## TODO
 - Configure the `NUMBER_LOG_KEY` Worker secret before using the private `/number-log` endpoint.
